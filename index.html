@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poolesville Chromebook System</title>
+<title>Blair Chromebook System</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="card login-card">
-  <h1>📦 Poolesville Chromebook System</h1>
+  <h1>📦 Blair Chromebook System</h1>
   <p class="subtitle">Create an account or sign in</p>
   <input id="username" placeholder="Username">
   <input id="password" type="password" placeholder="Password">
@@ -25,11 +25,10 @@
 <div id="app" class="hidden">
   <div class="card">
     <div class="topbar">
-        <h1>📦 Poolesville Chromebook System</h1>
+      <h1>📦 Blair Chromebook System</h1>
       <button class="btn" onclick="logout()">Logout</button>
     </div>
 
-    <!-- NAVIGATION -->
     <div class="nav">
       <button class="btn active" onclick="showTab('checkout', this)">Check Out</button>
       <button class="btn" onclick="showTab('checkin', this)">Check In</button>
@@ -61,8 +60,9 @@
         <thead>
           <tr>
             <th>CB #</th>
+            <th>Barcode</th>
+            <th>Serial #</th>
             <th>Student ID</th>
-            <th>Student Name</th>
             <th>Checked Out</th>
             <th>Checked In</th>
             <th>Status</th>
@@ -76,10 +76,10 @@
 </div>
 
 <script>
+const SCRIPT_URL = 'YOUR_SCRIPT_URL_HERE';
+
 function getUsers()     { return JSON.parse(localStorage.getItem('cbUsers')   || '{}'); }
 function saveUsers(u)   { localStorage.setItem('cbUsers',   JSON.stringify(u)); }
-function getRecords()   { return JSON.parse(localStorage.getItem('cbRecords') || '[]'); }
-function saveRecords(r) { localStorage.setItem('cbRecords', JSON.stringify(r)); }
 
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('cbLoggedIn')) {
@@ -129,54 +129,79 @@ function showTab(name, btn) {
   if (name === 'report') loadReport();
 }
 
-function checkout() {
+async function checkout() {
   const cbNum = document.getElementById('coNum').value.trim();
   const stuId = document.getElementById('coStudent').value.trim();
-  const name  = document.getElementById('coName').value.trim();
   const msg   = document.getElementById('coMsg');
   if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
-  const records = getRecords();
-  if (records.find(r => r.cbNum === cbNum && !r.checkinDate)) {
-    showMsg(msg, `Chromebook #${cbNum} is already checked out!`, 'error'); return;
+  showMsg(msg, 'Saving...', '');
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today() })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
+      document.getElementById('coNum').value = '';
+      document.getElementById('coStudent').value = '';
+      document.getElementById('coName').value = '';
+    } else {
+      showMsg(msg, data.message || 'Error.', 'error');
+    }
+  } catch(e) {
+    showMsg(msg, 'Connection error. Check your Script URL.', 'error');
   }
-  records.unshift({ cbNum, studentId: stuId, studentName: name, checkoutDate: today(), checkinDate: null });
-  saveRecords(records);
-  showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
-  document.getElementById('coNum').value = '';
-  document.getElementById('coStudent').value = '';
-  document.getElementById('coName').value = '';
 }
 
-function checkin() {
+async function checkin() {
   const cbNum = document.getElementById('ciNum').value.trim();
   const msg   = document.getElementById('ciMsg');
   if (!cbNum) { showMsg(msg, 'Enter Chromebook #.', 'error'); return; }
-  const records = getRecords();
-  const record  = records.find(r => r.cbNum === cbNum && !r.checkinDate);
-  if (!record) { showMsg(msg, `Chromebook #${cbNum} is not currently checked out.`, 'error'); return; }
-  record.checkinDate = today();
-  saveRecords(records);
-  showMsg(msg, `✓ Chromebook #${cbNum} checked back in.`, 'success');
-  document.getElementById('ciNum').value = '';
+  showMsg(msg, 'Saving...', '');
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today() })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msg, `✓ Chromebook #${cbNum} checked back in.`, 'success');
+      document.getElementById('ciNum').value = '';
+    } else {
+      showMsg(msg, data.message || 'Error.', 'error');
+    }
+  } catch(e) {
+    showMsg(msg, 'Connection error. Check your Script URL.', 'error');
+  }
 }
 
-function loadReport() {
-  const records = getRecords();
-  const tbody   = document.getElementById('reportBody');
-  if (!records.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
-    return;
+async function loadReport() {
+  const tbody = document.getElementById('reportBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = data.rows || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>#${r.cbNum}</td>
+        <td>${r.barcode || '—'}</td>
+        <td>${r.serial  || '—'}</td>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td>${r.checkinDate || '—'}</td>
+        <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">${r.status}</span></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data. Check your Script URL.</td></tr>';
   }
-  tbody.innerHTML = records.map(r => `
-    <tr>
-      <td>#${r.cbNum}</td>
-      <td>${r.studentId}</td>
-      <td>${r.studentName || '—'}</td>
-      <td>${r.checkoutDate}</td>
-      <td>${r.checkinDate || '—'}</td>
-      <td><span class="badge ${r.checkinDate ? 'badge-in' : 'badge-out'}">${r.checkinDate ? 'Returned' : 'Out'}</span></td>
-    </tr>
-  `).join('');
 }
 
 function today() {
@@ -190,3 +215,4 @@ function showMsg(el, text, type) {
 </script>
 </body>
 </html>
+
