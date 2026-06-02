@@ -210,32 +210,50 @@ async function checkin() {
 async function loadReport() {
   const tbody = document.getElementById('reportBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
+
+  tbody.innerHTML =
+    '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
+
   try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const res = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
     const rows = data.rows || [];
+
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
+      tbody.innerHTML =
+        '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
       return;
     }
+
     tbody.innerHTML = rows.map(r => `
       <tr>
         <td>#${r.cbNum}</td>
         <td>${r.barcode || '—'}</td>
-        <td>${r.serial  || '—'}</td>
-        <td>${r.studentId}</td>
-        <td>${r.checkoutDate}</td>
-        <td>${r.checkinDate}</td>
-        <td>${r.notes}</td>
-        <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">${r.status}</span></td>
+        <td>${r.serial || '—'}</td>
+        <td>${r.studentId || '—'}</td>
+        <td>${r.checkoutDate || '—'}</td>
+        <td>${r.checkinDate || '—'}</td>
+        <td>${r.notes || ''}</td>
+        <td>
+          <span class="badge ${
+            r.status === 'Out'
+              ? 'badge-out'
+              : 'badge-in'
+          }">
+            ${r.status}
+          </span>
+        </td>
       </tr>
     `).join('');
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
+
+  } catch (e) {
+    console.error(e);
+
+    tbody.innerHTML =
+      '<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
   }
 }
-
+  
 async function loadOverdue() {
   const tbody = document.getElementById('overdueBody');
   if (!tbody) return;
