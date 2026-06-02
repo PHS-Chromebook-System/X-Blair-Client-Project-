@@ -230,25 +230,19 @@ async function loadReport() {
         <td>#${r.cbNum}</td>
         <td>${r.barcode || '—'}</td>
         <td>${r.serial || '—'}</td>
-        <td>${r.studentId || '—'}</td>
-        <td>${r.checkoutDate || '—'}</td>
-        <td>${r.checkinDate || '—'}</td>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td>${r.checkinDate}</td>
+        <td>${r.notes}</td>
         <td>
-          <span class="badge ${
-            r.status === 'Out'
-              ? 'badge-out'
-              : 'badge-in'
-          }">
+          <span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">
             ${r.status}
           </span>
         </td>
-        <td>${r.notes || ''}</td>
       </tr>
     `).join('');
 
   } catch (e) {
-    console.error(e);
-
     tbody.innerHTML =
       '<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
   }
