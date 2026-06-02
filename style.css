@@ -15,7 +15,7 @@ body {
   border-radius: 14px;
   padding: 36px;
   width: 100%;
-  max-width: 700px;
+  max-width: 1200px;
 }
 .login-card {
   max-width: 400px;
@@ -91,7 +91,15 @@ input:focus { border-color: #00e5a0; }
 .msg { font-size: 0.875rem; min-height: 20px; margin-top: 4px; }
 .success { color: #00e5a0; }
 .error   { color: #ff4f4f; }
-table { width: 100%; border-collapse: collapse; }
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
 th {
   text-align: left;
   font-size: 0.75rem;
@@ -100,11 +108,13 @@ th {
   color: #6b7494;
   padding: 10px 12px;
   border-bottom: 1px solid #2a2f3d;
+  white-space: nowrap;
 }
 td {
   padding: 10px 12px;
   border-bottom: 1px solid #1c2029;
   font-size: 0.875rem;
+  white-space: nowrap;
 }
 .badge {
   display: inline-block;
