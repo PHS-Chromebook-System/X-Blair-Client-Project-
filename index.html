@@ -33,6 +33,7 @@
       <button class="btn active" onclick="showTab('checkout', this)">Check Out</button>
       <button class="btn" onclick="showTab('checkin', this)">Check In</button>
       <button class="btn" onclick="showTab('report', this)">Report</button>
+      <button class="btn" onclick="showTab('overdue', this)">⚠️ Overdue</button>
     </div>
 
     <!-- CHECKOUT TAB -->
@@ -40,7 +41,6 @@
       <h2>Check Out Chromebook</h2>
       <input id="coNum" placeholder="Chromebook Number (1–32)">
       <input id="coStudent" placeholder="Student ID">
-      <input id="coCheckedOutBy" placeholder="Checked out by (F / S / M)">
       <input id="coNotes" placeholder="Notes (optional)">
       <button class="btn" onclick="checkout()">Check Out</button>
       <div id="coMsg" class="msg"></div>
@@ -50,7 +50,6 @@
     <div id="checkin" class="tab">
       <h2>Check In Chromebook</h2>
       <input id="ciNum" placeholder="Chromebook Number (1–32)">
-      <input id="ciCheckedInBy" placeholder="Checked in by (F / S / M)">
       <button class="btn" onclick="checkin()">Check In</button>
       <div id="ciMsg" class="msg"></div>
     </div>
@@ -62,23 +61,43 @@
         <button class="btn" onclick="printReport()">🖨️ Print Report</button>
       </div>
       <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>CB #</th>
-            <th>Barcode</th>
-            <th>Serial #</th>
-            <th>Student ID</th>
-            <th>Checked Out</th>
-            <th>Checked In</th>
-            <th>Checked Out By</th>
-            <th>Checked In By</th>
-            <th>Notes</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="reportBody"></tbody>
-      </table>
+        <table>
+          <thead>
+            <tr>
+              <th>CB #</th>
+              <th>Barcode</th>
+              <th>Serial #</th>
+              <th>Student ID</th>
+              <th>Checked Out</th>
+              <th>Checked In</th>
+              <th>Notes</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- OVERDUE TAB -->
+    <div id="overdue" class="tab">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>⚠️ Overdue Chromebooks</h2>
+        <button class="btn" onclick="loadOverdue()">🔄 Refresh</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>CB #</th>
+              <th>Barcode</th>
+              <th>Student ID</th>
+              <th>Date Signed Out</th>
+              <th>Days Overdue</th>
+            </tr>
+          </thead>
+          <tbody id="overdueBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -136,71 +155,68 @@ function showTab(name, btn) {
   document.querySelectorAll('.nav .btn').forEach(b => b.classList.remove('active'));
   document.getElementById(name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'report') loadReport();
+  if (name === 'report')  loadReport();
+  if (name === 'overdue') loadOverdue();
 }
 
 async function checkout() {
-  const cbNum        = document.getElementById('coNum').value.trim();
-  const stuId        = document.getElementById('coStudent').value.trim();
-  const checkedOutBy = document.getElementById('coCheckedOutBy').value.trim();
-  const notes        = document.getElementById('coNotes').value.trim();
-  const msg          = document.getElementById('coMsg');
+  const cbNum = document.getElementById('coNum').value.trim();
+  const stuId = document.getElementById('coStudent').value.trim();
+  const notes = document.getElementById('coNotes').value.trim();
+  const msg   = document.getElementById('coMsg');
   if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
   showMsg(msg, 'Saving...', '');
   try {
     const res  = await fetch(SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), checkedOutBy, notes })
+      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), notes })
     });
     const data = await res.json();
     if (data.success) {
       showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
       document.getElementById('coNum').value = '';
       document.getElementById('coStudent').value = '';
-      document.getElementById('coCheckedOutBy').value = '';
       document.getElementById('coNotes').value = '';
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
   } catch(e) {
-    showMsg(msg, 'Connection error. Check your Script URL.', 'error');
+    showMsg(msg, 'Connection error.', 'error');
   }
 }
 
 async function checkin() {
-  const cbNum       = document.getElementById('ciNum').value.trim();
-  const checkedInBy = document.getElementById('ciCheckedInBy').value.trim();
-  const msg         = document.getElementById('ciMsg');
+  const cbNum = document.getElementById('ciNum').value.trim();
+  const msg   = document.getElementById('ciMsg');
   if (!cbNum) { showMsg(msg, 'Enter Chromebook #.', 'error'); return; }
   showMsg(msg, 'Saving...', '');
   try {
     const res  = await fetch(SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today(), checkedInBy })
+      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today() })
     });
     const data = await res.json();
     if (data.success) {
       showMsg(msg, `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`, 'success');
       document.getElementById('ciNum').value = '';
-      document.getElementById('ciCheckedInBy').value = '';
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
   } catch(e) {
-    showMsg(msg, 'Connection error. Check your Script URL.', 'error');
+    showMsg(msg, 'Connection error.', 'error');
   }
 }
 
 async function loadReport() {
   const tbody = document.getElementById('reportBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
   try {
     const res  = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
     const rows = data.rows || [];
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `
@@ -211,14 +227,38 @@ async function loadReport() {
         <td>${r.studentId}</td>
         <td>${r.checkoutDate}</td>
         <td>${r.checkinDate}</td>
-        <td>${r.checkedOutBy}</td>
-        <td>${r.checkedInBy}</td>
         <td>${r.notes}</td>
         <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">${r.status}</span></td>
       </tr>
     `).join('');
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data. Check your Script URL.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
+  }
+}
+
+async function loadOverdue() {
+  const tbody = document.getElementById('overdueBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=overdue');
+    const data = await res.json();
+    const rows = data.rows || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#00e5a0;padding:20px">✓ No overdue Chromebooks!</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>#${r.cbNum}</td>
+        <td>${r.barcode}</td>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td><span class="badge badge-out">${r.daysOverdue} day${r.daysOverdue !== 1 ? 's' : ''}</span></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
   }
 }
 
