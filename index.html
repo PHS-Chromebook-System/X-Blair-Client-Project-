@@ -40,7 +40,8 @@
       <h2>Check Out Chromebook</h2>
       <input id="coNum" placeholder="Chromebook Number (1–32)">
       <input id="coStudent" placeholder="Student ID">
-      <input id="coName" placeholder="Student Name (optional)">
+      <input id="coCheckedOutBy" placeholder="Checked out by (F / S / M)">
+      <input id="coNotes" placeholder="Notes (optional)">
       <button class="btn" onclick="checkout()">Check Out</button>
       <div id="coMsg" class="msg"></div>
     </div>
@@ -49,19 +50,18 @@
     <div id="checkin" class="tab">
       <h2>Check In Chromebook</h2>
       <input id="ciNum" placeholder="Chromebook Number (1–32)">
+      <input id="ciCheckedInBy" placeholder="Checked in by (F / S / M)">
       <button class="btn" onclick="checkin()">Check In</button>
       <div id="ciMsg" class="msg"></div>
     </div>
 
     <!-- REPORT TAB -->
     <div id="report" class="tab">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <h2>Report</h2>
-    <button class="btn" onclick="printReport()">🖨️ Print Report</button>
-  </div>
-
-  <table>
-
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>Report</h2>
+        <button class="btn" onclick="printReport()">🖨️ Print Report</button>
+      </div>
+      <table>
         <thead>
           <tr>
             <th>CB #</th>
@@ -70,6 +70,9 @@
             <th>Student ID</th>
             <th>Checked Out</th>
             <th>Checked In</th>
+            <th>Checked Out By</th>
+            <th>Checked In By</th>
+            <th>Notes</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -81,10 +84,10 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'YOUR_SCRIPT_URL_HERE';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnBI5LzcIJ-PdaJirm5wwAKRX0H9D_SPoWwISKLPSNDl4ftNK2sK4GnHTcO0unZpr75g/exec';
 
-function getUsers()     { return JSON.parse(localStorage.getItem('cbUsers')   || '{}'); }
-function saveUsers(u)   { localStorage.setItem('cbUsers',   JSON.stringify(u)); }
+function getUsers()   { return JSON.parse(localStorage.getItem('cbUsers') || '{}'); }
+function saveUsers(u) { localStorage.setItem('cbUsers', JSON.stringify(u)); }
 
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('cbLoggedIn')) {
@@ -135,22 +138,25 @@ function showTab(name, btn) {
 }
 
 async function checkout() {
-  const cbNum = document.getElementById('coNum').value.trim();
-  const stuId = document.getElementById('coStudent').value.trim();
-  const msg   = document.getElementById('coMsg');
+  const cbNum        = document.getElementById('coNum').value.trim();
+  const stuId        = document.getElementById('coStudent').value.trim();
+  const checkedOutBy = document.getElementById('coCheckedOutBy').value.trim();
+  const notes        = document.getElementById('coNotes').value.trim();
+  const msg          = document.getElementById('coMsg');
   if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
   showMsg(msg, 'Saving...', '');
   try {
     const res  = await fetch(SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today() })
+      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), checkedOutBy, notes })
     });
     const data = await res.json();
     if (data.success) {
       showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
       document.getElementById('coNum').value = '';
       document.getElementById('coStudent').value = '';
-      document.getElementById('coName').value = '';
+      document.getElementById('coCheckedOutBy').value = '';
+      document.getElementById('coNotes').value = '';
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
@@ -160,19 +166,21 @@ async function checkout() {
 }
 
 async function checkin() {
-  const cbNum = document.getElementById('ciNum').value.trim();
-  const msg   = document.getElementById('ciMsg');
+  const cbNum       = document.getElementById('ciNum').value.trim();
+  const checkedInBy = document.getElementById('ciCheckedInBy').value.trim();
+  const msg         = document.getElementById('ciMsg');
   if (!cbNum) { showMsg(msg, 'Enter Chromebook #.', 'error'); return; }
   showMsg(msg, 'Saving...', '');
   try {
     const res  = await fetch(SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today() })
+      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today(), checkedInBy })
     });
     const data = await res.json();
     if (data.success) {
-      showMsg(msg, `✓ Chromebook #${cbNum} checked back in.`, 'success');
+      showMsg(msg, `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`, 'success');
       document.getElementById('ciNum').value = '';
+      document.getElementById('ciCheckedInBy').value = '';
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
@@ -184,13 +192,13 @@ async function checkin() {
 async function loadReport() {
   const tbody = document.getElementById('reportBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
   try {
     const res  = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
     const rows = data.rows || [];
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `
@@ -200,12 +208,15 @@ async function loadReport() {
         <td>${r.serial  || '—'}</td>
         <td>${r.studentId}</td>
         <td>${r.checkoutDate}</td>
-        <td>${r.checkinDate || '—'}</td>
+        <td>${r.checkinDate}</td>
+        <td>${r.checkedOutBy}</td>
+        <td>${r.checkedInBy}</td>
+        <td>${r.notes}</td>
         <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">${r.status}</span></td>
       </tr>
     `).join('');
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data. Check your Script URL.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data. Check your Script URL.</td></tr>';
   }
 }
 
@@ -220,48 +231,29 @@ function showMsg(el, text, type) {
 
 function printReport() {
   const reportContent = document.getElementById('report').innerHTML;
-
   const printWindow = window.open('', '_blank');
-
   printWindow.document.write(`
     <html>
       <head>
         <title>Chromebook Report</title>
         <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-          }
-          th {
-            background: #f2f2f2;
-          }
-          button {
-            display: none;
-          }
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+          th { background: #f2f2f2; }
+          button { display: none; }
         </style>
       </head>
       <body>
-        <h1>Poolesville Chromebook Report</h1>
+        <h1>Blair Chromebook Report</h1>
         ${reportContent}
       </body>
     </html>
   `);
   printWindow.document.close();
   printWindow.focus();
-  setTimeout(() => {
-    printWindow.print();
-  }, 500);
+  setTimeout(() => { printWindow.print(); }, 500);
 }
 </script>
 </body>
 </html>
-
