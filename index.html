@@ -233,7 +233,6 @@ async function loadReport() {
         <td>${r.studentId || '—'}</td>
         <td>${r.checkoutDate || '—'}</td>
         <td>${r.checkinDate || '—'}</td>
-        <td>${r.notes || ''}</td>
         <td>
           <span class="badge ${
             r.status === 'Out'
@@ -243,6 +242,7 @@ async function loadReport() {
             ${r.status}
           </span>
         </td>
+        <td>${r.notes || ''}</td>
       </tr>
     `).join('');
 
