@@ -39,21 +39,42 @@
 
     <!-- CHECKOUT TAB -->
     <div id="checkout" class="tab active">
-      <h2>Check Out Chromebook</h2>
-      <input id="coNum" placeholder="Chromebook Number — scan or type" onkeydown="handleScanEnter(event, 'coStudent')">
-      <input id="coStudent" placeholder="Student ID — scan or type" onkeydown="handleScanEnter(event, null, checkout)">
-      <input id="coNotes" placeholder="Notes (optional)">
-      <button class="btn" onclick="checkout()">Check Out</button>
-      <div id="coMsg" class="msg"></div>
-    </div>
+  <h2>Check Out Chromebook</h2>
+
+  <input id="coNum" placeholder="Barcode Number">
+
+  <button class="btn" onclick="scanCheckoutBarcode()">
+    📷 Scan Chromebook
+  </button>
+
+  <input id="coStudent" placeholder="Student ID">
+  <input id="coNotes" placeholder="Notes (optional)">
+
+  <button class="btn" onclick="checkout()">
+    Check Out
+  </button>
+
+  <div id="coMsg" class="msg"></div>
+</div>
+
 
     <!-- CHECKIN TAB -->
     <div id="checkin" class="tab">
-      <h2>Check In Chromebook</h2>
-      <input id="ciNum" placeholder="Chromebook Number — scan or type" onkeydown="handleScanEnter(event, null, checkin)">
-      <button class="btn" onclick="checkin()">Check In</button>
-      <div id="ciMsg" class="msg"></div>
-    </div>
+  <h2>Check In Chromebook</h2>
+
+  <input id="ciNum" placeholder="Barcode Number">
+
+  <button class="btn" onclick="scanCheckinBarcode()">
+    📷 Scan Chromebook
+  </button>
+
+  <button class="btn" onclick="checkin()">
+    Check In
+  </button>
+
+  <div id="ciMsg" class="msg"></div>
+</div>
+
 
     <!-- REPORT TAB -->
     <div id="report" class="tab">
@@ -129,7 +150,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7-avA2MvVcGoYv0UgoYGkQgcGhhTGWkfKfC-xTY6-ky4iEsOqWubaLgN1jTwUshxhIw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZoue4jaaChtxFDy8QoIqG38fbrZTVnpvh4MS5d5ZQ1k4otwVbAeV7gZxEiQBL4WRCjw/exec';
 
 function getUsers()   { return JSON.parse(localStorage.getItem('cbUsers') || '{}'); }
 function saveUsers(u) { localStorage.setItem('cbUsers', JSON.stringify(u)); }
