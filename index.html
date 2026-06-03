@@ -80,6 +80,29 @@
       </div>
     </div>
 
+    <!--HISTORY TAB-->
+    <div id="history" class="tab">
+      <button class="btn" onclick="showTab('report', document.querySelectorAll('.nav .btn')[2])">
+        ← Back to Report
+      </button>
+
+    <h2 id="historyTitle">Chromebook History</h2>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Date Signed Out</th>
+            <th>Date Returned</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
     <!-- OVERDUE TAB -->
     <div id="overdue" class="tab">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -244,7 +267,11 @@ async function loadReport() {
 
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td>#${r.cbNum}</td>
+        <td>
+          <a href="#" onclick="viewHistory('${r.cbNum}')">
+          #${r.cbNum}
+          </a>
+        </td>
         <td>${r.barcode || '—'}</td>
         <td>${r.serial || '—'}</td>
         <td>${r.studentId}</td>
