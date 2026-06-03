@@ -130,3 +130,16 @@ td {
   .nav { flex-wrap: wrap; }
   .login-buttons { flex-direction: column; }
 }
+.cb-link {
+  color: #00e5a0;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.cb-link:hover {
+  text-decoration: underline;
+}
+
+.cb-link:visited {
+  color: #00e5a0;
+}
