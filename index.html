@@ -277,12 +277,12 @@ async function loadReport() {
         <td>${r.studentId}</td>
         <td>${r.checkoutDate}</td>
         <td>${r.checkinDate}</td>
-        <td>${r.notes}</td>
         <td>
           <span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">
             ${r.status}
           </span>
         </td>
+        <td>${r.notes}</td>
       </tr>
     `).join('');
 
