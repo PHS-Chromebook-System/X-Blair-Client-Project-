@@ -318,6 +318,51 @@ async function loadOverdue() {
   }
 }
 
+  async function viewHistory(cbNum) {
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.remove('active')
+  );
+
+  document.getElementById('history').classList.add('active');
+
+  document.getElementById('historyTitle').textContent =
+    `Chromebook #${cbNum} History`;
+
+  const tbody = document.getElementById('historyBody');
+
+  tbody.innerHTML =
+    '<tr><td colspan="4">Loading...</td></tr>';
+
+  try {
+    const res = await fetch(
+      SCRIPT_URL +
+      '?action=history&cbNum=' +
+      encodeURIComponent(cbNum)
+    );
+
+    const data = await res.json();
+
+    if (!data.rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="4">No history found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.rows.map(r => `
+      <tr>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td>${r.checkinDate}</td>
+        <td>${r.notes}</td>
+      </tr>
+    `).join('');
+
+  } catch (err) {
+    tbody.innerHTML =
+      '<tr><td colspan="4">Could not load history.</td></tr>';
+  }
+}
+
 function today() {
   return new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
