@@ -289,7 +289,7 @@ async function loadReport() {
     tbody.innerHTML = rows.map(r => `
       <tr>
         <td>
-          <a href="#" onclick="viewHistory('${r.cbNum}')">
+          <a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}')">
           #${r.cbNum}
           </a>
         </td>
