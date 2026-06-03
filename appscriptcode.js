@@ -9,6 +9,31 @@ function doGet(e) {
   return ContentService.createTextOutput('Invalid').setMimeType(ContentService.MimeType.TEXT);
 }
 
+function getHistory(cbNum) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(String(cbNum));
+
+  if (!sheet) {
+    return jsonResponse({ rows: [] });
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const rows = [];
+
+  for (let i = 3; i < data.length; i++) {
+    if (!data[i][0]) continue;
+
+    rows.push({
+      studentId: data[i][0],
+      checkoutDate: formatDate(data[i][1]),
+      checkinDate: data[i][2] ? formatDate(data[i][2]) : '—',
+      notes: data[i][5] || ''
+    });
+  }
+
+  return jsonResponse({ rows });
+}
+
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
   if (data.action === 'checkout') return checkOut(data);
