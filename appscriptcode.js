@@ -59,18 +59,47 @@ function daysSince(dateVal) {
 /* =======================
    CHECK OUT (FIXED)
 ======================= */
-
-function checkOut(data) {
+function resolveChromebook(input) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(String(data.cbNum));
+  const main = ss.getSheetByName('Main');
 
-  if (!sheet) {
+  const rows = main.getDataRange().getValues();
+
+  for (let i = 1; i < rows.length; i++) {
+
+    const cbNum = String(rows[i][0]).trim();
+    const barcode = String(rows[i][1]).trim();
+
+    if (
+      String(input).trim() === cbNum ||
+      String(input).trim() === barcode
+    ) {
+      return cbNum;
+    }
+  }
+
+  return null;
+}
+function checkOut(data) {
+
+  const realCbNum = resolveChromebook(data.cbNum);
+
+  if (!realCbNum) {
     return jsonResponse({
-      success: false,
-      message: `No tab found for Chromebook #${data.cbNum}.`
+      success:false,
+      message:'Chromebook not found.'
     });
   }
 
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(realCbNum);
+
+  if (!sheet) {
+    return jsonResponse({
+      success:false,
+      message:`No tab found for Chromebook #${realCbNum}.`
+    });
+  }
   const rows = sheet.getDataRange().getValues();
 
   // Find latest real record (skip headers + info rows)
@@ -87,7 +116,7 @@ function checkOut(data) {
   if (latest && isBlank(latest[2])) {
     return jsonResponse({
       success: false,
-      message: `Chromebook #${data.cbNum} is already checked out to ${latest[0]}.`
+      message: `Chromebook #${realCbNum} is already checked out to ${latest[0]}.`
     });
   }
 
@@ -117,6 +146,9 @@ function checkIn(data) {
       message: `No tab found for Chromebook #${data.cbNum}.`
     });
   }
+
+  
+}
 
   const rows = sheet.getDataRange().getValues();
 
