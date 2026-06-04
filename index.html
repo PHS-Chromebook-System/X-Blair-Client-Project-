@@ -41,13 +41,18 @@
     <div id="checkout" class="tab active">
   <h2>Check Out Chromebook</h2>
 
-  <input id="coNum" placeholder="Barcode Number">
+  <input id="coNum" placeholder="Chromebook Number OR Barcode">
 
   <button class="btn" onclick="scanCheckoutBarcode()">
     📷 Scan Chromebook
   </button>
 
   <input id="coStudent" placeholder="Student ID">
+
+  <button class="btn" onclick="scanStudentID()">
+    🎓 Scan Student ID
+  </button>
+
   <input id="coNotes" placeholder="Notes (optional)">
 
   <button class="btn" onclick="checkout()">
@@ -59,10 +64,10 @@
 
 
     <!-- CHECKIN TAB -->
-    <div id="checkin" class="tab">
+<div id="checkin" class="tab">
   <h2>Check In Chromebook</h2>
 
-  <input id="ciNum" placeholder="Barcode Number">
+  <input id="ciNum" placeholder="Chromebook Number OR Barcode">
 
   <button class="btn" onclick="scanCheckinBarcode()">
     📷 Scan Chromebook
@@ -392,7 +397,107 @@ function showMsg(el, text, type) {
   el.textContent = text;
   el.className = 'msg ' + type;
 }
+let html5Scanner = null;
+let currentTarget = null;
 
+function scanCheckoutBarcode() {
+  startCameraScan('coNum');
+}
+
+function scanCheckinBarcode() {
+  startCameraScan('ciNum');
+}
+
+function scanStudentID() {
+  startCameraScan('coStudent');
+}
+
+function startCameraScan(targetField) {
+
+  currentTarget = targetField;
+
+  const modal = document.createElement('div');
+  modal.id = 'scannerModal';
+
+  modal.innerHTML = `
+    <div style="
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.8);
+      z-index:9999;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    ">
+      <div style="
+        background:white;
+        padding:20px;
+        border-radius:10px;
+        width:90%;
+        max-width:500px;
+      ">
+        <h3>Scan Barcode</h3>
+
+        <div id="reader"></div>
+
+        <button class="btn" onclick="stopScanner()">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  html5Scanner = new Html5Qrcode("reader", {
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.QR_CODE
+    ]
+  });
+
+  html5Scanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: 250
+    },
+    (decodedText) => {
+
+      document.getElementById(currentTarget).value =
+        decodedText.trim();
+
+      stopScanner();
+    },
+    (errorMessage) => {
+      // Ignore scan failures while searching
+    }
+  );
+}
+
+function stopScanner() {
+
+  const modal = document.getElementById('scannerModal');
+
+  if (html5Scanner) {
+
+    html5Scanner.stop()
+      .then(() => {
+        html5Scanner.clear();
+        html5Scanner = null;
+
+        if (modal) modal.remove();
+      })
+      .catch(() => {
+        if (modal) modal.remove();
+      });
+
+  } else {
+
+    if (modal) modal.remove();
+  }
+}
 function printReport() {
   const reportContent = document.getElementById('report').innerHTML;
   const printWindow = window.open('', '_blank');
