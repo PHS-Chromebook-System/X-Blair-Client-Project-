@@ -77,10 +77,11 @@ input:focus { border-color: #ab945f; }
   padding-bottom: 16px;
 }
 .nav .btn {
-  background: transparent;
-  border: 1px solid #2a2f3d;
-  color: #6b7494;
+  background: #ab945f;
+  border: 1px solid #ab945f;
+  color: #0d0f14;
 }
+
 .nav .btn.active {
   background: #ab945f;
   border-color: #ab945f;
