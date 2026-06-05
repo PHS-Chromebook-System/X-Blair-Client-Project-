@@ -5,6 +5,7 @@ function doGet(e) {
   const action = e.parameter.action;
   if (action === 'report')  return getReport();
   if (action === 'overdue') return getOverdue();
+  if (action === 'history') return getHistory(e.parameter.cbNum);
   return ContentService.createTextOutput('Invalid').setMimeType(ContentService.MimeType.TEXT);
 }
 
