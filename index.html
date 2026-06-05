@@ -12,13 +12,12 @@
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="card login-card">
   <h1>Poolesville Chromebook System</h1>
-  <p class="subtitle">Create an account or sign in</p>
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
-  <div class="login-buttons">
-    <button class="btn" onclick="login()">Sign In</button>
-    <button class="btn" onclick="createAccount()">Create Account</button>
-  </div>
+  <p class="subtitle">Enter your name and the shared access key</p>
+<input id="username" placeholder="Your Name">
+<input id="password" type="password" placeholder="Access Key">
+<div class="login-buttons">
+  <button class="btn" onclick="login()">Sign In</button>
+</div>
   <div id="loginMsg" class="msg"></div>
 </div>
 
@@ -168,30 +167,25 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── Shared access key — change this to whatever you want ──
+const ACCESS_KEY = 'chromebook';
+// ──────────────────────────────────────────────────────────
+
 function login() {
-  const user  = document.getElementById('username').value.trim();
-  const pass  = document.getElementById('password').value.trim();
-  const msg   = document.getElementById('loginMsg');
-  const users = getUsers();
-  if (!user || !pass)       { showMsg(msg, 'Enter username and password.', 'error'); return; }
-  if (!users[user])         { showMsg(msg, 'Account not found.', 'error'); return; }
-  if (users[user] !== pass) { showMsg(msg, 'Wrong password.', 'error'); return; }
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  const msg  = document.getElementById('loginMsg');
+
+  if (!user) { showMsg(msg, 'Please enter your name.', 'error'); return; }
+  if (!pass) { showMsg(msg, 'Please enter the access key.', 'error'); return; }
+  if (pass !== ACCESS_KEY) {
+    showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return;
+  }
+
   localStorage.setItem('cbLoggedIn', user);
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadReport();
-}
-
-function createAccount() {
-  const user  = document.getElementById('username').value.trim();
-  const pass  = document.getElementById('password').value.trim();
-  const msg   = document.getElementById('loginMsg');
-  const users = getUsers();
-  if (!user || !pass) { showMsg(msg, 'Enter a username and password.', 'error'); return; }
-  if (users[user])    { showMsg(msg, 'Username already taken.', 'error'); return; }
-  users[user] = pass;
-  saveUsers(users);
-  showMsg(msg, 'Account created! You can now sign in.', 'success');
 }
 
 function logout() {
