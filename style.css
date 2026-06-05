@@ -23,7 +23,7 @@ body {
   flex-direction: column;
   gap: 12px;
 }
-h1 { font-size: 1.4rem; font-weight: 800; color: #00e5a0; margin-bottom: 4px; }
+h1 { font-size: 1.4rem; font-weight: 800; color: #ab945f; margin-bottom: 4px; }
 h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
 .subtitle { color: #6b7494; font-size: 0.9rem; }
 input {
@@ -37,9 +37,9 @@ input {
   outline: none;
   transition: border-color 0.2s;
 }
-input:focus { border-color: #00e5a0; }
+input:focus { border-color: #ab945f; }
 .btn {
-  background: #00e5a0;
+  background: #ab945f;
   border: none;
   border-radius: 8px;
   color: #0d0f14;
@@ -82,14 +82,14 @@ input:focus { border-color: #00e5a0; }
   color: #6b7494;
 }
 .nav .btn.active {
-  background: #00e5a0;
-  border-color: #00e5a0;
+  background: #ab945f;
+  border-color: #ab945f;
   color: #0d0f14;
 }
 .tab { display: none; flex-direction: column; gap: 12px; }
 .tab.active { display: flex; }
 .msg { font-size: 0.875rem; min-height: 20px; margin-top: 4px; }
-.success { color: #00e5a0; }
+.success { color: #ab945f; }
 .error   { color: #ff4f4f; }
 .table-wrapper {
   width: 100%;
@@ -124,14 +124,14 @@ td {
   font-weight: 700;
 }
 .badge-out { background: rgba(255,79,79,0.15); color: #ff4f4f; }
-.badge-in  { background: rgba(0,229,160,0.12); color: #00e5a0; }
+.badge-in  { background: rgba(0,229,160,0.12); color: #ab945f; }
 .hidden { display: none; }
 @media (max-width: 500px) {
   .nav { flex-wrap: wrap; }
   .login-buttons { flex-direction: column; }
 }
 .cb-link {
-  color: #00e5a0;
+  color: #ab945f;
   text-decoration: none;
   font-weight: 700;
 }
@@ -141,5 +141,5 @@ td {
 }
 
 .cb-link:visited {
-  color: #00e5a0;
+  color: #ab945f;
 }
