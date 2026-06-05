@@ -43,12 +43,12 @@ function getHistory(cbNum) {
   }
 
   const data = sheet.getDataRange().getValues();
-  const history = [];
+  const rows = [];
 
-  for (let i = 3; i < data.length; i++) {
+  for (let i = data.length - 1; i >= 3; i--) {
     if (!data[i][0]) continue;
 
-    history.push({
+    rows.push({
       studentId: data[i][0],
       checkoutDate: formatDate(data[i][1]),
       checkinDate: data[i][2] ? formatDate(data[i][2]) : '—',
@@ -56,10 +56,7 @@ function getHistory(cbNum) {
     });
   }
 
-  return jsonResponse({
-    cbNum: cbNum,
-    rows: history
-  });
+  return jsonResponse({ rows: rows });
 }
 
 function daysSince(checkoutDate) {
