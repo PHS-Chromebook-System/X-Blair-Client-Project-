@@ -9,11 +9,33 @@ function doGet(e) {
   return ContentService.createTextOutput('Invalid').setMimeType(ContentService.MimeType.TEXT);
 }
 
+function resetAllHistory() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const main = ss.getSheetByName('Main');
+  const mainRows = main.getDataRange().getValues();
+
+  for (let i = 1; i < mainRows.length; i++) {
+    const cbNum = mainRows[i][0];
+    if (!cbNum) continue;
+
+    const sheet = ss.getSheetByName(String(cbNum));
+    if (!sheet) continue;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 3) {
+      sheet.deleteRows(4, lastRow - 3);
+    }
+  }
+
+  return jsonResponse({ success: true });
+}
+
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
   if (data.action === 'checkout') return checkOut(data);
   if (data.action === 'checkin')  return checkIn(data);
   return jsonResponse({ success: false, message: 'Unknown action' });
+  if (data.action === 'resetAllHistory') return resetAllHistory();
 }
 
 function formatDate(val) {
