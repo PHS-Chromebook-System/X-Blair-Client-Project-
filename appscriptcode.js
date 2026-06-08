@@ -9,6 +9,22 @@ function doGet(e) {
   return ContentService.createTextOutput('Invalid').setMimeType(ContentService.MimeType.TEXT);
 }
 
+function resetCbHistory(data) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(String(data.cbNum));
+
+  if (!sheet) {
+    return jsonResponse({ success: false, message: 'Chromebook sheet not found.' });
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 3) {
+    sheet.deleteRows(4, lastRow - 3);
+  }
+
+  return jsonResponse({ success: true });
+}
+
 function resetAllHistory() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const main = ss.getSheetByName('Main');
@@ -31,11 +47,16 @@ function resetAllHistory() {
 }
 
 function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  if (data.action === 'checkout') return checkOut(data);
-  if (data.action === 'checkin')  return checkIn(data);
-  return jsonResponse({ success: false, message: 'Unknown action' });
-  if (data.action === 'resetAllHistory') return resetAllHistory();
+  try {
+    const data = JSON.parse(e.postData.contents);
+    if (data.action === 'checkout')        return checkOut(data);
+    if (data.action === 'checkin')         return checkIn(data);
+    if (data.action === 'resetHistory')    return resetCbHistory(data);
+    if (data.action === 'resetAllHistory') return resetAllHistory();
+    return jsonResponse({ success: false, message: 'Unknown action' });
+  } catch(err) {
+    return jsonResponse({ success: false, message: 'Parse error: ' + err.message });
+  }
 }
 
 function formatDate(val) {
