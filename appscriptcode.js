@@ -240,22 +240,50 @@ function getReport() {
 }
 
 function getOverdue() {
-  const ss    = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(OVERDUE_SHEET);
-  if (!sheet) return jsonResponse({ rows: [] });
-  const rows   = sheet.getDataRange().getValues();
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const main = ss.getSheetByName('Main');
+  const mainRows = main.getDataRange().getValues();
+
   const result = [];
-  for (let i = 1; i < rows.length; i++) {
-    if (!rows[i][0]) continue;
-    const checkoutDate = rows[i][3];
-    result.push({
-  cbNum:        rows[i][0],
-  barcode:      rows[i][1] || '—',
-  studentId:    rows[i][2],
-  checkoutDate: formatDate(checkoutDate),
-  daysOverdue:  daysSince(checkoutDate)
-});
+
+  for (let i = 1; i < mainRows.length; i++) {
+    const cbNum = mainRows[i][0];
+    const barcode = mainRows[i][1];
+
+    if (!cbNum) continue;
+
+    const sheet = ss.getSheetByName(String(cbNum));
+    if (!sheet) continue;
+
+    const rows = sheet.getDataRange().getValues();
+
+    let latest = null;
+
+    for (let j = rows.length - 1; j >= 3; j--) {
+      if (rows[j][0]) {
+        latest = rows[j];
+        break;
+      }
+    }
+
+    if (!latest) continue;
+
+    const isOut = !latest[2];
+
+    if (isOut) {
+      result.push({
+        cbNum: cbNum,
+        barcode: barcode || '—',
+        studentId: latest[0],
+        checkoutDate: formatDate(latest[1]),
+        daysOverdue: daysSince(latest[1])
+      });
+    }
   }
+
+  // Sort longest checked-out first
+  result.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
   return jsonResponse({ rows: result });
 }
 
