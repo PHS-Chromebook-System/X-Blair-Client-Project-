@@ -209,17 +209,22 @@ function getReport() {
     if (!cbNum) continue;
     const sheet = ss.getSheetByName(String(cbNum));
     if (!sheet) continue;
-    const rows = sheet.getDataRange().getValues();
+    const lastRow = sheet.getLastRow();
+  const rows = sheet.getRange(1, 1, lastRow, 6).getValues();
     let latest = null;
-    for (let j = 3; j < rows.length; j++) {
-      if (rows[j][0]) latest = rows[j];
-    }
+
+for (let j = rows.length - 1; j >= 3; j--) {
+  if (rows[j][0]) {
+    latest = rows[j];
+    break;
+  }
+}
     if (latest) {
       const isOut = !latest[2];
       // Auto-add to overdue if out and overdue
-      if (isOut && isOverdue(latest[1])) {
+     /* if (isOut && isOverdue(latest[1])) {
         addToOverdue(cbNum, barcode, latest[0], formatDate(latest[1]));
-      }
+      }*/
       result.push({
         cbNum, barcode, serial,
         studentId:    latest[0],
@@ -255,7 +260,8 @@ function getOverdue() {
     const sheet = ss.getSheetByName(String(cbNum));
     if (!sheet) continue;
 
-    const rows = sheet.getDataRange().getValues();
+    const lastRow = sheet.getLastRow();
+const rows = sheet.getRange(1, 1, lastRow, 6).getValues();
 
     let latest = null;
 
