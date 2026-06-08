@@ -26,24 +26,30 @@ function resetCbHistory(data) {
 }
 
 function resetAllHistory() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const main = ss.getSheetByName('Main');
-  const mainRows = main.getDataRange().getValues();
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const main = ss.getSheetByName('Main');
+    if (!main) return jsonResponse({ success: false, message: 'Main sheet not found.' });
 
-  for (let i = 1; i < mainRows.length; i++) {
-    const cbNum = mainRows[i][0];
-    if (!cbNum) continue;
+    const mainRows = main.getDataRange().getValues();
 
-    const sheet = ss.getSheetByName(String(cbNum));
-    if (!sheet) continue;
+    for (let i = 1; i < mainRows.length; i++) {
+      const cbNum = mainRows[i][0];
+      if (!cbNum) continue;
 
-    const lastRow = sheet.getLastRow();
-    if (lastRow > 3) {
-      sheet.deleteRows(4, lastRow - 3);
+      const sheet = ss.getSheetByName(String(cbNum));
+      if (!sheet) continue;
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 3) {
+        sheet.deleteRows(4, lastRow - 3);
+      }
     }
-  }
 
-  return jsonResponse({ success: true });
+    return jsonResponse({ success: true });
+  } catch(err) {
+    return jsonResponse({ success: false, message: err.message });
+  }
 }
 
 function doPost(e) {
