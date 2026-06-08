@@ -13,7 +13,7 @@
 <div id="loginScreen" class="card login-card">
   <h1>Poolesville Chromebook System</h1>
   <p class="subtitle">Enter your name and the shared access key</p>
-<input id="username" placeholder="Your Name">
+<input id="username" placeholder="School Name">
 <input id="password" type="password" placeholder="Access Key">
 <div class="login-buttons">
   <button class="btn" onclick="login()">Sign In</button>
@@ -176,7 +176,7 @@ function login() {
   const pass = document.getElementById('password').value.trim();
   const msg  = document.getElementById('loginMsg');
 
-  if (!user) { showMsg(msg, 'Please enter your name.', 'error'); return; }
+  if (!user) { showMsg(msg, 'Please enter your school name.', 'error'); return; }
   if (!pass) { showMsg(msg, 'Please enter the access key.', 'error'); return; }
   if (pass !== ACCESS_KEY) {
     showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return;
