@@ -29,145 +29,13 @@
       <button class="btn" onclick="logout()">Logout</button>
     </div>
 
-    <div class="dashboard">
-
-  <div class="panel checkout-panel">
-
-    <h2>Check Out Chromebook</h2>
-
-    <input id="coNum"
-           placeholder="Chromebook Number OR Barcode">
-
-    <button class="btn"
-            onclick="scanCheckoutBarcode()">
-      Scan Chromebook
-    </button>
-
-    <input id="coStudent"
-           placeholder="Student ID">
-
-    <button class="btn"
-            onclick="scanStudentID()">
-      Scan Student ID
-    </button>
-
-    <input id="coNotes"
-           placeholder="Notes (optional)">
-
-    <button class="btn"
-            onclick="checkout()">
-      Check Out
-    </button>
-
-    <div id="coMsg" class="msg"></div>
-
-  </div>
-
-  <div class="panel checkin-panel">
-
-    <h2>Check In Chromebook</h2>
-
-    <input id="ciNum"
-           placeholder="Chromebook Number OR Barcode">
-
-    <button class="btn"
-            onclick="scanCheckinBarcode()">
-      Scan Chromebook
-    </button>
-
-    <button class="btn"
-            onclick="checkin()">
-      Check In
-    </button>
-
-    <div id="ciMsg" class="msg"></div>
-
-  </div>
-
-  <div class="panel overdue-panel">
-
-    <div class="section-header">
-
-      <h2>Overdue Chromebooks</h2>
-
-      <button class="btn"
-              onclick="loadOverdue()">
-        Refresh
-      </button>
-
+    <div class="nav">
+      <button class="btn active" onclick="showTab('checkout', this)">Check Out</button>
+      <button class="btn" onclick="showTab('checkin', this)">Check In</button>
+      <button class="btn" onclick="showTab('report', this)">Report</button>
+      <button class="btn" onclick="showTab('overdue', this)">Overdue</button>
     </div>
 
-    <div class="table-wrapper">
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>CB #</th>
-            <th>Barcode</th>
-            <th>Student ID</th>
-            <th>Date Signed Out</th>
-            <th>Days Overdue</th>
-          </tr>
-        </thead>
-
-        <tbody id="overdueBody"></tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-
-  <div class="panel report-panel">
-
-    <div class="section-header">
-
-      <h2>Report</h2>
-
-      <div>
-
-        <button class="btn"
-                onclick="printReport()">
-          Print Report
-        </button>
-
-        <button class="btn"
-                style="background:#ff4f4f;"
-                onclick="confirmResetAll()">
-          Reset All History
-        </button>
-
-      </div>
-
-    </div>
-
-    <div class="table-wrapper">
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>CB #</th>
-            <th>Barcode</th>
-            <th>Serial #</th>
-            <th>Student ID</th>
-            <th>Checked Out</th>
-            <th>Checked In</th>
-            <th>Status</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-
-        <tbody id="reportBody"></tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-
-</div>
     <!-- CHECKOUT TAB -->
     <div id="checkout" class="tab active">
   <h2>Check Out Chromebook</h2>
@@ -297,7 +165,6 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     loadReport();
-    loadOverdue();
   }
 });
 
@@ -320,7 +187,6 @@ function login() {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadReport();
-  loadOverdue();
 }
 
   function confirmResetAll() {
@@ -380,6 +246,15 @@ function logout() {
   localStorage.removeItem('cbLoggedIn');
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav .btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'report')  loadReport();
+  if (name === 'overdue') loadOverdue();
 }
 
 // Called when Enter is pressed in a scan field.
