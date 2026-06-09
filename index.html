@@ -522,27 +522,30 @@ qrbox: {
 }
 
 function stopScanner() {
-
   const modal = document.getElementById('scannerModal');
 
   if (html5Scanner) {
+    try {
+      html5Scanner.stop()
+        .then(() => {
+          html5Scanner.clear();
+          html5Scanner = null;
 
-    html5Scanner.stop()
-      .then(() => {
-        html5Scanner.clear();
-        html5Scanner = null;
-
-        if (modal) modal.remove();
-      })
-      .catch(() => {
-        if (modal) modal.remove();
-      });
-
+          if (modal) modal.remove();
+        })
+        .catch(() => {
+          if (modal) modal.remove();
+          html5Scanner = null;
+        });
+    } catch (err) {
+      if (modal) modal.remove();
+      html5Scanner = null;
+    }
   } else {
-
     if (modal) modal.remove();
   }
 }
+  
 function printReport() {
   const reportContent = document.getElementById('report').innerHTML;
   const printWindow = window.open('', '_blank');
