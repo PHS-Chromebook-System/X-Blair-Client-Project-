@@ -276,7 +276,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyAaxRVGhmzs0HqD894Ry0YYIhe6Rs8rTgSgfP8feRyHZM5MmUqOKq5j-fx_lk1TN3A/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwaIciHnUPQ1pcoMuTH6TvWr0ctM4iEHiTAS4K_HvCFoT1cu-5XQPduTPnIh_ciLc2Wvw/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -355,7 +355,7 @@ async function loadDashboard() {
     if (!activity.length) {
       list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
     } else {
-      list.innerHTML = activity.slice(-8).reverse().map(a => `
+      list.innerHTML = activity.reverse().slice(0, 8).map(a => `
         <div class="activity-item">
           <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
           <span class="activity-text">${a.text}</span>
