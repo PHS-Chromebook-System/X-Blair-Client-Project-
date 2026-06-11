@@ -464,7 +464,7 @@ function renderReport(rows) {
       <td>${r.studentId}</td>
       <td>${r.checkoutDate}</td>
       <td>${r.checkinDate}</td>
-      <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">${r.status}</span></td>
+      <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in-green'}">${r.status}</span></td>
       <td>${r.notes || '—'}</td>
     </tr>
   `).join('');
@@ -475,12 +475,7 @@ function filterReport() {
   if (!allReportRows.length) { loadReport(); return; }
   if (!q) { renderReport(allReportRows); return; }
   const filtered = allReportRows.filter(r =>
-    String(r.cbNum).toLowerCase().includes(q) ||
-    String(r.barcode).toLowerCase().includes(q) ||
-    String(r.studentId).toLowerCase().includes(q) ||
-    String(r.serial).toLowerCase().includes(q) ||
-    String(r.status).toLowerCase().includes(q) ||
-    String(r.notes).toLowerCase().includes(q)
+    String(r.cbNum).toLowerCase().includes(q)
   );
   renderReport(filtered);
 }
@@ -506,7 +501,7 @@ async function loadCheckedOut() {
         <td>${r.serial || '—'}</td>
         <td>${r.studentId}</td>
         <td>${r.checkoutDate}</td>
-        <td>${daysSince(r.checkoutDate)}</td>
+        <td><span class="badge badge-out">${daysSince(r.checkoutDate)}</span></td>
         <td>${r.notes || '—'}</td>
       </tr>
     `).join('');
