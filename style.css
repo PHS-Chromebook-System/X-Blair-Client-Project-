@@ -399,13 +399,13 @@ input::placeholder { color: #4a5068; }
 .stat-value {
   font-size: 2.2rem;
   font-weight: 900;
-  color: #ab945f;
   line-height: 1;
 }
 
-.stat-in  { color: #00e5a0; }
-.stat-out { color: #ff8c42; }
-.stat-overdue { color: #ff4f4f; }
+.stat-in       { color: #00e5a0; }
+.stat-out      { color: #ff8c42; }
+.stat-overdue  { color: #ff4f4f; }
+#statTotal     { color: #ab945f; }
 
 .stat-label {
   font-size: 0.75rem;
