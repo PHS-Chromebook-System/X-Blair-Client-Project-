@@ -3,89 +3,181 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poolesville Chromebook System</title>
+<title>Poolesville Chromebook Management Portal</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="loginScreen" class="card login-card">
-  <h1>Poolesville Chromebook System</h1>
-  <p class="subtitle">Enter your school name and the shared access key</p>
-<input id="username" placeholder="School Name">
-<input id="password" type="password" placeholder="Access Key">
-<div class="login-buttons">
-  <button class="btn" onclick="login()">Sign In</button>
-</div>
-  <div id="loginMsg" class="msg"></div>
+<div id="loginScreen" class="login-wrapper">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">📚</div>
+      <h1 class="login-title">Poolesville High School</h1>
+      <p class="login-sub">Chromebook Management Portal</p>
+      <p class="login-tagline">Asset Tracking &amp; Checkout System</p>
+    </div>
+    <div class="login-form">
+      <div class="field-group">
+        <label class="field-label">School Name</label>
+        <input id="username" placeholder="e.g. Poolesville High School" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Access Key</label>
+        <input id="password" type="password" placeholder="Enter shared access key">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="login()">Sign In</button>
+      <div id="loginMsg" class="msg"></div>
+    </div>
+  </div>
 </div>
 
 <!-- MAIN APP -->
-<div id="app" class="hidden">
-  <div class="card">
-    <div class="topbar">
-      <h1>Poolesville Chromebook System</h1>
-      <button class="btn" onclick="logout()">Logout</button>
+<div id="app" class="hidden app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-logo">📚</span>
+      <span class="sidebar-title">PHS Portal</span>
     </div>
 
-    <div class="nav">
-      <button class="btn active" onclick="showTab('checkout', this)">Check Out</button>
-      <button class="btn" onclick="showTab('checkin', this)">Check In</button>
-      <button class="btn" onclick="showTab('report', this)">Report</button>
-      <button class="btn" onclick="showTab('overdue', this)">Overdue</button>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showTab('dashboard', this)">
+        <span class="nav-icon">⊞</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showTab('checkout', this)">
+        <span class="nav-icon">↑</span> Check Out
+      </button>
+      <button class="nav-item" onclick="showTab('checkin', this)">
+        <span class="nav-icon">↓</span> Check In
+      </button>
+      <button class="nav-item" onclick="showTab('report', this)">
+        <span class="nav-icon">☰</span> Report
+      </button>
+      <button class="nav-item" onclick="showTab('checkedout', this)">
+        <span class="nav-icon">◉</span> Checked Out
+      </button>
+      <button class="nav-item" onclick="showTab('history', this)" id="historyNavBtn" style="display:none;">
+        <span class="nav-icon">↺</span> History
+      </button>
+      <button class="nav-item" onclick="showTab('settings', this)">
+        <span class="nav-icon">⚙</span> Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="signed-in-label">Signed in as</div>
+      <div class="signed-in-name" id="sidebarUser">IT Staff</div>
+      <button class="btn btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TOP BAR (mobile) -->
+    <div class="topbar-mobile">
+      <span class="topbar-title">Poolesville Chromebook Portal</span>
+      <button class="btn btn-ghost" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="dashboard" class="tab active">
+      <div class="page-header">
+        <h2 class="page-title">Dashboard</h2>
+        <p class="page-subtitle">Poolesville Chromebook Management Portal</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-in" id="statIn">—</div>
+          <div class="stat-label">In</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-out" id="statOut">—</div>
+          <div class="stat-label">Out</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-overdue" id="statOverdue">—</div>
+          <div class="stat-label">Overdue</div>
+        </div>
+      </div>
+
+      <div class="section-label">Quick Actions</div>
+      <div class="quick-actions">
+        <button class="btn btn-primary btn-action" onclick="showTab('checkout', document.querySelector('[data-tab=checkout]'))">
+          ↑ Check Out Chromebook
+        </button>
+        <button class="btn btn-secondary btn-action" onclick="showTab('checkin', document.querySelector('[data-tab=checkin]'))">
+          ↓ Check In Chromebook
+        </button>
+      </div>
+
+      <div class="section-label">Recent Activity</div>
+      <div class="activity-list" id="activityList">
+        <div class="activity-loading">Loading activity...</div>
+      </div>
     </div>
 
     <!-- CHECKOUT TAB -->
-    <div id="checkout" class="tab active">
-  <h2>Check Out Chromebook</h2>
+    <div id="checkout" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Check Out Chromebook</h2>
+      </div>
+      <div class="form-card">
+        <div class="field-group">
+          <label class="field-label">Chromebook Barcode</label>
+          <input id="coNum" placeholder="Scan or type barcode / number">
+        </div>
+        <button class="btn btn-ghost btn-scan" onclick="scanCheckoutBarcode()">⬛ Scan Chromebook</button>
 
-  <input id="coNum" placeholder="Chromebook Number OR Barcode">
+        <div class="field-group">
+          <label class="field-label">Student ID</label>
+          <input id="coStudent" placeholder="Enter student ID">
+        </div>
+        <button class="btn btn-ghost btn-scan" onclick="scanStudentID()">⬛ Scan Student ID</button>
 
-  <button class="btn" onclick="scanCheckoutBarcode()">
-    Scan Chromebook
-  </button>
+        <div class="field-group">
+          <label class="field-label">Notes</label>
+          <input id="coNotes" placeholder="Optional notes (e.g. broken key)">
+        </div>
 
-  <input id="coStudent" placeholder="Student ID">
-
-  <button class="btn" onclick="scanStudentID()">
-    Scan Student ID
-  </button>
-
-  <input id="coNotes" placeholder="Notes (optional)">
-
-  <button class="btn" onclick="checkout()">
-    Check Out
-  </button>
-
-  <div id="coMsg" class="msg"></div>
-</div>
-
+        <button class="btn btn-primary btn-full btn-lg" onclick="checkout()">CHECK OUT</button>
+        <div id="coMsg" class="msg"></div>
+      </div>
+    </div>
 
     <!-- CHECKIN TAB -->
-<div id="checkin" class="tab">
-  <h2>Check In Chromebook</h2>
+    <div id="checkin" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Check In Chromebook</h2>
+      </div>
+      <div class="form-card">
+        <div class="field-group">
+          <label class="field-label">Chromebook Barcode</label>
+          <input id="ciNum" placeholder="Scan or type barcode / number">
+        </div>
+        <button class="btn btn-ghost btn-scan" onclick="scanCheckinBarcode()">⬛ Scan Chromebook</button>
 
-  <input id="ciNum" placeholder="Chromebook Number OR Barcode">
-
-  <button class="btn" onclick="scanCheckinBarcode()">
-    Scan Chromebook
-  </button>
-
-  <button class="btn" onclick="checkin()">
-    Check In
-  </button>
-
-  <div id="ciMsg" class="msg"></div>
-</div>
-
+        <button class="btn btn-primary btn-full btn-lg" onclick="checkin()">CHECK IN</button>
+        <div id="ciMsg" class="msg"></div>
+      </div>
+    </div>
 
     <!-- REPORT TAB -->
     <div id="report" class="tab">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h2>Report</h2>
-        <button class="btn" onclick="printReport()">Print Report</button>
-        <button class="btn" style="background:#ff4f4f;" onclick="confirmResetAll()">Reset All History</button>
+      <div class="page-header">
+        <h2 class="page-title">Chromebook Inventory Report</h2>
+      </div>
+      <div class="toolbar">
+        <input id="reportSearch" placeholder="Search Chromebook / Barcode / Student ID" oninput="filterReport()" class="search-input">
+        <button class="btn btn-ghost" onclick="printReport()">🖨 Print Report</button>
       </div>
       <div class="table-wrapper">
         <table>
@@ -106,34 +198,32 @@
       </div>
     </div>
 
-    <!--HISTORY TAB-->
+    <!-- HISTORY TAB -->
     <div id="history" class="tab">
-      <button class="btn" onclick="showTab('report', document.querySelectorAll('.nav .btn')[2])">
-        ← Back to Report
-      </button>
-
-    <h2 id="historyTitle">Chromebook History</h2>
-
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Student ID</th>
-            <th>Date Signed Out</th>
-            <th>Date Returned</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-      </table>
+      <div class="page-header">
+        <button class="btn btn-ghost btn-back" onclick="showTab('report', document.querySelector('.nav-item[onclick*=report]'))">← Back to Report</button>
+        <h2 class="page-title" id="historyTitle">Chromebook History</h2>
+        <div id="historyMeta" class="history-meta"></div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Date Signed Out</th>
+              <th>Date Returned</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
 
-    <!-- OVERDUE TAB -->
-    <div id="overdue" class="tab">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h2>Overdue Chromebooks</h2>
-        <button class="btn" onclick="loadOverdue()">Refresh</button>
+    <!-- CHECKED OUT TAB -->
+    <div id="checkedout" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Currently Checked Out Chromebooks</h2>
       </div>
       <div class="table-wrapper">
         <table>
@@ -141,105 +231,79 @@
             <tr>
               <th>CB #</th>
               <th>Barcode</th>
+              <th>Serial #</th>
               <th>Student ID</th>
               <th>Date Signed Out</th>
-              <th>Days Overdue</th>
+              <th>Days Out</th>
+              <th>Notes</th>
             </tr>
           </thead>
-          <tbody id="overdueBody"></tbody>
+          <tbody id="checkedoutBody"></tbody>
         </table>
       </div>
     </div>
 
-  </div>
+    <!-- SETTINGS TAB -->
+    <div id="settings" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Settings</h2>
+      </div>
+      <div class="form-card settings-card">
+        <div class="settings-row">
+          <div class="settings-desc">
+            <div class="settings-label">Reset Chromebook History</div>
+            <div class="settings-hint">Permanently clears the checkout history of every Chromebook. This cannot be undone.</div>
+          </div>
+          <button class="btn btn-danger" onclick="confirmResetAll()">Reset Chromebook History</button>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-row">
+          <div class="settings-desc">
+            <div class="settings-label">Export Report</div>
+            <div class="settings-hint">Download the full inventory report as a printable page.</div>
+          </div>
+          <button class="btn btn-ghost" onclick="printReport()">Export Report</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwaIciHnUPQ1pcoMuTH6TvWr0ctM4iEHiTAS4K_HvCFoT1cu-5XQPduTPnIh_ciLc2Wvw/exec';
+const ACCESS_KEY = 'chromebook';
 
-function getUsers()   { return JSON.parse(localStorage.getItem('cbUsers') || '{}'); }
-function saveUsers(u) { localStorage.setItem('cbUsers', JSON.stringify(u)); }
+let allReportRows = [];
 
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('cbLoggedIn')) {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    loadReport();
+    showApp(localStorage.getItem('cbLoggedIn'));
   }
+
+  // Attach data-tab attributes for quick action buttons
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    const match = btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
+    if (match) btn.setAttribute('data-tab', match[1]);
+  });
 });
 
-// ── Shared access key — change this to whatever you want ──
-const ACCESS_KEY = 'chromebook';
-// ──────────────────────────────────────────────────────────
+function showApp(user) {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('sidebarUser').textContent = user;
+  loadDashboard();
+}
 
 function login() {
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value.trim();
   const msg  = document.getElementById('loginMsg');
-
   if (!user) { showMsg(msg, 'Please enter your school name.', 'error'); return; }
   if (!pass) { showMsg(msg, 'Please enter the access key.', 'error'); return; }
-  if (pass !== ACCESS_KEY) {
-    showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return;
-  }
-
+  if (pass !== ACCESS_KEY) { showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return; }
   localStorage.setItem('cbLoggedIn', user);
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  loadReport();
-}
-
-  function confirmResetAll() {
-  const modal = document.createElement('div');
-  modal.id = 'confirmModal';
-  modal.innerHTML = `
-    <div style="
-      position:fixed;inset:0;background:rgba(0,0,0,.7);
-      z-index:9999;display:flex;justify-content:center;align-items:center;
-    ">
-      <div style="
-        background:white;padding:30px;border-radius:12px;
-        max-width:400px;width:90%;text-align:center;
-      ">
-        <h3 style="margin-bottom:10px;">⚠️ Reset All History</h3>
-        <p style="margin-bottom:20px;color:#000;">
-          Are you sure you want to clear the history of
-          <strong>every Chromebook</strong>?
-          This cannot be undone.
-        </p>
-        <div style="display:flex;gap:10px;justify-content:center;">
-          <button class="btn" style="background:#ff4f4f;" onclick="resetAllHistory()">
-            Yes, Reset All
-          </button>
-          <button class="btn" onclick="document.getElementById('confirmModal').remove()">
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
-
-async function resetAllHistory() {
-  document.getElementById('confirmModal').remove();
-  const tbody = document.getElementById('reportBody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">Resetting all histories...</td></tr>';
-
-  try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'resetAllHistory' })
-    });
-    const data = await res.json();
-    if (data.success) {
-      loadReport();
-    } else {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Error: ${data.message}</td></tr>`;
-    }
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Connection error.</td></tr>';
-  }
+  showApp(user);
 }
 
 function logout() {
@@ -250,27 +314,74 @@ function logout() {
 
 function showTab(name, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav .btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById(name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'report')  loadReport();
-  if (name === 'overdue') loadOverdue();
+  if (btn) btn.classList.add('active');
+
+  if (name === 'dashboard')  loadDashboard();
+  if (name === 'report')     loadReport();
+  if (name === 'checkedout') loadCheckedOut();
 }
 
-// Called when Enter is pressed in a scan field.
-// nextId: focus the next field (for multi-scan workflows)
-// action: call this function directly (for single-field workflows)
-function handleScanEnter(event, nextId, action) {
-  if (event.key !== 'Enter') return;
-  event.preventDefault();
-  if (nextId) {
-    document.getElementById(nextId).focus();
-    document.getElementById(nextId).select();
-  } else if (action) {
-    action();
+// ── DASHBOARD ──────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = data.rows || [];
+
+    const total   = rows.length;
+    const outRows = rows.filter(r => r.status === 'Out');
+    const inCount = total - outRows.length;
+
+    // Sort overdue (longest out first) — reuse days logic
+    const sorted = [...outRows].sort((a, b) => daysSince(a.checkoutDate) - daysSince(b.checkoutDate));
+    const overdue = outRows.filter(r => daysSince(r.checkoutDate) > 0);
+
+    document.getElementById('statTotal').textContent   = total;
+    document.getElementById('statIn').textContent      = inCount;
+    document.getElementById('statOut').textContent     = outRows.length;
+    document.getElementById('statOverdue').textContent = overdue.length;
+
+    // Recent activity: last 5 transactions across all rows
+    const activity = [];
+    rows.forEach(r => {
+      if (r.checkoutDate && r.checkoutDate !== '—') {
+        activity.push({ date: r.checkoutDate, text: `#${r.cbNum} checked out to ${r.studentId}`, type: 'out' });
+      }
+      if (r.checkinDate && r.checkinDate !== '—') {
+        activity.push({ date: r.checkinDate, text: `#${r.cbNum} returned`, type: 'in' });
+      }
+    });
+
+    const list = document.getElementById('activityList');
+    if (!activity.length) {
+      list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
+    } else {
+      list.innerHTML = activity.slice(-8).reverse().map(a => `
+        <div class="activity-item">
+          <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
+          <span class="activity-text">${a.text}</span>
+          <span class="activity-date">${a.date}</span>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    document.getElementById('activityList').innerHTML = '<div class="activity-empty">Could not load data.</div>';
   }
 }
 
+function daysSince(dateStr) {
+  if (!dateStr || dateStr === '—') return 0;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return 0;
+  const d = new Date(parts[2], parts[0]-1, parts[1]);
+  const today = new Date();
+  d.setHours(0,0,0,0); today.setHours(0,0,0,0);
+  return Math.floor((today - d) / 86400000);
+}
+
+// ── CHECKOUT ──────────────────────────────────────────────
 async function checkout() {
   const cbNum = document.getElementById('coNum').value.trim();
   const stuId = document.getElementById('coStudent').value.trim();
@@ -298,6 +409,7 @@ async function checkout() {
   }
 }
 
+// ── CHECKIN ──────────────────────────────────────────────
 async function checkin() {
   const cbNum = document.getElementById('ciNum').value.trim();
   const msg   = document.getElementById('ciMsg');
@@ -321,122 +433,225 @@ async function checkin() {
   }
 }
 
+// ── REPORT ──────────────────────────────────────────────
 async function loadReport() {
   const tbody = document.getElementById('reportBody');
   if (!tbody) return;
-
-  tbody.innerHTML =
-    '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
-
+  tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Loading...</td></tr>';
   try {
-    const res = await fetch(SCRIPT_URL + '?action=report');
+    const res  = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
-    const rows = data.rows || [];
+    allReportRows = data.rows || [];
+    renderReport(allReportRows);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-error">Could not load data.</td></tr>';
+  }
+}
 
+function renderReport(rows) {
+  const tbody = document.getElementById('reportBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No records yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
+      <td>${r.barcode || '—'}</td>
+      <td>${r.serial || '—'}</td>
+      <td>${r.studentId}</td>
+      <td>${r.checkoutDate}</td>
+      <td>${r.checkinDate}</td>
+      <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">${r.status}</span></td>
+      <td>${r.notes || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function filterReport() {
+  const q = document.getElementById('reportSearch').value.toLowerCase();
+  if (!q) { renderReport(allReportRows); return; }
+  const filtered = allReportRows.filter(r =>
+    String(r.cbNum).toLowerCase().includes(q) ||
+    String(r.barcode).toLowerCase().includes(q) ||
+    String(r.studentId).toLowerCase().includes(q)
+  );
+  renderReport(filtered);
+}
+
+// ── CHECKED OUT ──────────────────────────────────────────────
+async function loadCheckedOut() {
+  const tbody = document.getElementById('checkedoutBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = (data.rows || []).filter(r => r.status === 'Out');
+    rows.sort((a, b) => daysSince(b.checkoutDate) - daysSince(a.checkoutDate));
     if (!rows.length) {
-      tbody.innerHTML =
-        '<tr><td colspan="8" style="text-align:center;color:#6b7494;padding:20px">No records yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="table-empty">✓ All Chromebooks are currently checked in.</td></tr>';
       return;
     }
-
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td>
-          <a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}')">
-          #${r.cbNum}
-          </a>
-        </td>
+        <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
         <td>${r.barcode || '—'}</td>
         <td>${r.serial || '—'}</td>
         <td>${r.studentId}</td>
         <td>${r.checkoutDate}</td>
-        <td>${r.checkinDate}</td>
-        <td>
-          <span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in'}">
-            ${r.status}
-          </span>
-        </td>
-        <td>${r.notes}</td>
-      </tr>
-    `).join('');
-
-  } catch (e) {
-    tbody.innerHTML =
-      '<tr><td colspan="8" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
-  }
-}
-  
-async function loadOverdue() {
-  const tbody = document.getElementById('overdueBody');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7494;padding:20px">Loading...</td></tr>';
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=overdue');
-    const data = await res.json();
-    const rows = data.rows || [];
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#00e5a0;padding:20px">✓ No overdue Chromebooks!</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td>#${r.cbNum}</td>
-        <td>${r.barcode}</td>
-        <td>${r.studentId}</td>
-        <td>${r.checkoutDate}</td>
-        <td><span class="badge badge-out">${r.daysOverdue} day${r.daysOverdue !== 1 ? 's' : ''}</span></td>
+        <td>${daysSince(r.checkoutDate)}</td>
+        <td>${r.notes || '—'}</td>
       </tr>
     `).join('');
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ff4f4f;padding:20px">Could not load data.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
   }
 }
 
-  async function viewHistory(cbNum) {
-  document.querySelectorAll('.tab').forEach(t =>
-    t.classList.remove('active')
-  );
+// ── HISTORY ──────────────────────────────────────────────
+async function viewHistory(cbNum) {
+  // Show history nav button and activate it
+  const histBtn = document.getElementById('historyNavBtn');
+  histBtn.style.display = '';
 
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('history').classList.add('active');
+  histBtn.classList.add('active');
 
-  document.getElementById('historyTitle').textContent =
-    `Chromebook #${cbNum} History`;
+  document.getElementById('historyTitle').textContent = `Chromebook #${cbNum}`;
+
+  // Populate meta from allReportRows if available
+  const row = allReportRows.find(r => String(r.cbNum) === String(cbNum));
+  const meta = document.getElementById('historyMeta');
+  if (row) {
+    const statusClass = row.status === 'Out' ? 'badge-out' : 'badge-in';
+    const statusIcon  = row.status === 'Out' ? '🔴' : '🟢';
+    meta.innerHTML = `
+      <span>Barcode: <strong>${row.barcode || '—'}</strong></span>
+      <span>Serial #: <strong>${row.serial || '—'}</strong></span>
+      <span>Current Status: <span class="badge ${statusClass}">${statusIcon} ${row.status}</span></span>
+    `;
+  } else {
+    meta.innerHTML = '';
+  }
 
   const tbody = document.getElementById('historyBody');
-
-  tbody.innerHTML =
-    '<tr><td colspan="4">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" class="table-loading">Loading...</td></tr>';
 
   try {
-    const res = await fetch(
-      SCRIPT_URL +
-      '?action=history&cbNum=' +
-      encodeURIComponent(cbNum)
-    );
-
+    const res  = await fetch(SCRIPT_URL + '?action=history&cbNum=' + encodeURIComponent(cbNum));
     const data = await res.json();
-
-    if (!data.rows.length) {
-      tbody.innerHTML =
-        '<tr><td colspan="4">No history found.</td></tr>';
+    if (!data.rows || !data.rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No history found.</td></tr>';
       return;
     }
-
     tbody.innerHTML = data.rows.map(r => `
       <tr>
         <td>${r.studentId}</td>
         <td>${r.checkoutDate}</td>
         <td>${r.checkinDate}</td>
-        <td>${r.notes}</td>
+        <td>${r.notes || '—'}</td>
       </tr>
     `).join('');
-
-  } catch (err) {
-    tbody.innerHTML =
-      '<tr><td colspan="4">Could not load history.</td></tr>';
+  } catch(err) {
+    tbody.innerHTML = '<tr><td colspan="4" class="table-error">Could not load history.</td></tr>';
   }
 }
 
+// ── SETTINGS / RESET ──────────────────────────────────────────────
+function confirmResetAll() {
+  const modal = document.createElement('div');
+  modal.id = 'confirmModal';
+  modal.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">⚠️ Reset All History</h3>
+        <p class="modal-body">Are you sure you want to clear the history of <strong>every Chromebook</strong>? This cannot be undone.</p>
+        <div class="modal-actions">
+          <button class="btn btn-danger" onclick="resetAllHistory()">Yes, Reset All</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('confirmModal').remove()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function resetAllHistory() {
+  document.getElementById('confirmModal').remove();
+  const tbody = document.getElementById('reportBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Resetting all histories...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAllHistory' }) });
+    const data = await res.json();
+    if (data.success) { loadReport(); }
+    else if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="table-error">Error: ${data.message}</td></tr>`;
+  } catch(e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
+  }
+}
+
+// ── SCANNER ──────────────────────────────────────────────
+let html5Scanner = null;
+let currentTarget = null;
+
+function scanCheckoutBarcode() { startCameraScan('coNum'); }
+function scanCheckinBarcode()  { startCameraScan('ciNum'); }
+function scanStudentID()       { startCameraScan('coStudent'); }
+
+function startCameraScan(targetField) {
+  currentTarget = targetField;
+  const modal = document.createElement('div');
+  modal.id = 'scannerModal';
+  modal.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">Scan Barcode</h3>
+        <div id="reader"></div>
+        <button class="btn btn-danger btn-full" style="margin-top:15px;" onclick="stopScanner()">Cancel — Type Instead</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  html5Scanner = new Html5Qrcode("reader");
+  html5Scanner.start(
+    { facingMode: "environment" },
+    { fps: 15, qrbox: { width: 350, height: 150 } },
+    (decodedText) => {
+      document.getElementById(currentTarget).value = decodedText.trim();
+      stopScanner();
+    },
+    () => {}
+  );
+}
+
+function stopScanner() {
+  const modal = document.getElementById('scannerModal');
+  if (html5Scanner) {
+    try {
+      html5Scanner.stop().then(() => { html5Scanner.clear(); html5Scanner = null; if (modal) modal.remove(); })
+        .catch(() => { if (modal) modal.remove(); html5Scanner = null; });
+    } catch { if (modal) modal.remove(); html5Scanner = null; }
+  } else { if (modal) modal.remove(); }
+}
+
+// ── PRINT ──────────────────────────────────────────────
+function printReport() {
+  const reportContent = document.getElementById('report').innerHTML;
+  const pw = window.open('', '_blank');
+  pw.document.write(`
+    <html><head><title>Chromebook Report</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
+    </head><body><h1>Poolesville Chromebook Report</h1>${reportContent}</body></html>
+  `);
+  pw.document.close();
+  pw.focus();
+  setTimeout(() => pw.print(), 500);
+}
+
+// ── UTILS ──────────────────────────────────────────────
 function today() {
   return new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
@@ -445,135 +660,6 @@ function showMsg(el, text, type) {
   el.textContent = text;
   el.className = 'msg ' + type;
 }
-let html5Scanner = null;
-let currentTarget = null;
-
-function scanCheckoutBarcode() {
-  startCameraScan('coNum');
-}
-
-function scanCheckinBarcode() {
-  startCameraScan('ciNum');
-}
-
-function scanStudentID() {
-  startCameraScan('coStudent');
-}
-
-function startCameraScan(targetField) {
-
-  currentTarget = targetField;
-
-  const modal = document.createElement('div');
-  modal.id = 'scannerModal';
-
- modal.innerHTML = `
-  <div style="
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.8);
-    z-index:9999;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-  ">
-    <div style="
-      background:white;
-      color:#000;
-      padding:20px;
-      border-radius:10px;
-      width:90%;
-      max-width:500px;
-    ">
-      <h3 style="color:#000;">Scan Barcode</h3>
-
-      <div id="reader"></div>
-
-      <button class="btn"
-              style="width:100%;margin-top:15px;background:#ff4f4f;color:white;"
-              onclick="stopScanner()">
-        Cancel Scan & Type Instead
-      </button>
-    </div>
-  </div>
-`;
-  document.body.appendChild(modal);
-
- html5Scanner = new Html5Qrcode("reader");
-
-  html5Scanner.start(
-    { facingMode: "environment" },
-    {
-      fps: 15,
-qrbox: {
-  width: 350,
-  height: 150
-}
-    },
-    (decodedText) => {
-
-      document.getElementById(currentTarget).value =
-        decodedText.trim();
-
-      stopScanner();
-    },
-    (errorMessage) => {
-      // Ignore scan failures while searching
-    }
-  );
-}
-
-function stopScanner() {
-  const modal = document.getElementById('scannerModal');
-
-  if (html5Scanner) {
-    try {
-      html5Scanner.stop()
-        .then(() => {
-          html5Scanner.clear();
-          html5Scanner = null;
-
-          if (modal) modal.remove();
-        })
-        .catch(() => {
-          if (modal) modal.remove();
-          html5Scanner = null;
-        });
-    } catch (err) {
-      if (modal) modal.remove();
-      html5Scanner = null;
-    }
-  } else {
-    if (modal) modal.remove();
-  }
-}
-  
-function printReport() {
-  const reportContent = document.getElementById('report').innerHTML;
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Chromebook Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-          th { background: #f2f2f2; }
-          button { display: none; }
-        </style>
-      </head>
-      <body>
-        <h1>Poolesville Chromebook Report</h1>
-        ${reportContent}
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => { printWindow.print(); }, 500);
-}
 </script>
 </body>
 </html>
-
