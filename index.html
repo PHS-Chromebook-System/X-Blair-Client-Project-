@@ -139,13 +139,13 @@
             <label class="field-label">Chromebook Barcode</label>
             <input id="coNum" placeholder="Scan or type barcode / number">
           </div>
-          <button class="btn btn-ghost btn-scan" onclick="scanCheckoutBarcode()">⬛ Scan Chromebook</button>
+          <button class="btn btn-ghost btn-scan" onclick="scanCheckoutBarcode()"Scan Chromebook</button>
 
           <div class="field-group">
             <label class="field-label">Student ID</label>
             <input id="coStudent" placeholder="Enter student ID">
           </div>
-          <button class="btn btn-ghost btn-scan" onclick="scanStudentID()">⬛ Scan Student ID</button>
+          <button class="btn btn-ghost btn-scan" onclick="scanStudentID()">Scan Student ID</button>
 
           <div class="field-group">
             <label class="field-label">Notes</label>
@@ -166,7 +166,7 @@
             <label class="field-label">Chromebook Barcode</label>
             <input id="ciNum" placeholder="Scan or type barcode / number">
           </div>
-          <button class="btn btn-ghost btn-scan" onclick="scanCheckinBarcode()">⬛ Scan Chromebook</button>
+          <button class="btn btn-ghost btn-scan" onclick="scanCheckinBarcode()">Scan Chromebook</button>
 
           <button class="btn btn-primary btn-full btn-lg" style="margin-top: 8px;" onclick="checkin()">CHECK IN</button>
           <div id="ciMsg" class="msg"></div>
@@ -181,7 +181,7 @@
         <h2 class="page-title">Chromebook Inventory Report</h2>
       </div>
       <div class="toolbar">
-        <input id="reportSearch" placeholder="Search Chromebook / Barcode / Student ID" oninput="filterReport()" class="search-input">
+        <input id="reportSearch" placeholder="Search by Chromebook #" oninput="filterReport()" class="search-input">
         <button class="btn btn-ghost" onclick="printReport()">🖨 Print Report</button>
       </div>
       <div class="table-wrapper">
