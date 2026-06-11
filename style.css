@@ -459,7 +459,7 @@ input::placeholder { color: #4a5068; }
 }
 
 .dot-out { background: #ff4f4f; }
-.dot-in  { background: #ab945f; }
+.dot-in  { background: #00e5a0; }
 
 .activity-text {
   flex: 1;
@@ -554,8 +554,9 @@ tr:hover td { background: #1a1e27; }
   font-weight: 700;
 }
 
-.badge-out { background: rgba(255, 79, 79, 0.15); color: #ff4f4f; }
-.badge-in  { background: rgba(171, 148, 95, 0.15); color: #ab945f; }
+.badge-out      { background: rgba(255, 79, 79, 0.15); color: #ff4f4f; }
+.badge-in       { background: rgba(171, 148, 95, 0.15); color: #ab945f; }
+.badge-in-green { background: rgba(0, 229, 160, 0.12); color: #00e5a0; }
 
 /* ── CB LINK ─────────────────────────────────────────────── */
 .cb-link {
