@@ -276,7 +276,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziHdx63ZMyF5rT914wq9cZ1hptwsPaQts9xmB7-bB2SMimtZcVC0z84em_lFneAWhN/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwaIciHnUPQ1pcoMuTH6TvWr0ctM4iEHiTAS4K_HvCFoT1cu-5XQPduTPnIh_ciLc2Wvw/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -437,6 +437,8 @@ async function checkin() {
 async function loadReport() {
   const tbody = document.getElementById('reportBody');
   if (!tbody) return;
+  const searchEl = document.getElementById('reportSearch');
+  if (searchEl) searchEl.value = '';
   tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Loading...</td></tr>';
   try {
     const res  = await fetch(SCRIPT_URL + '?action=report');
@@ -470,11 +472,15 @@ function renderReport(rows) {
 
 function filterReport() {
   const q = document.getElementById('reportSearch').value.toLowerCase();
+  if (!allReportRows.length) { loadReport(); return; }
   if (!q) { renderReport(allReportRows); return; }
   const filtered = allReportRows.filter(r =>
     String(r.cbNum).toLowerCase().includes(q) ||
     String(r.barcode).toLowerCase().includes(q) ||
-    String(r.studentId).toLowerCase().includes(q)
+    String(r.studentId).toLowerCase().includes(q) ||
+    String(r.serial).toLowerCase().includes(q) ||
+    String(r.status).toLowerCase().includes(q) ||
+    String(r.notes).toLowerCase().includes(q)
   );
   renderReport(filtered);
 }
