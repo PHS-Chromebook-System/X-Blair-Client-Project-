@@ -221,7 +221,7 @@ body {
 /* ── CHECK SPLIT (combined checkout / checkin) ───────────── */
 .check-split {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -269,7 +269,6 @@ body {
   border: 1px solid #2a2f3d;
   border-radius: 14px;
   padding: 28px;
-  max-width: 560px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -582,9 +581,13 @@ tr:hover td { background: #1a1e27; }
 
 /* ── SETTINGS ────────────────────────────────────────────── */
 .settings-card {
+  background: #15181f;
+  border: 1px solid #2a2f3d;
+  border-radius: 12px;
+  overflow: hidden;
   max-width: 680px;
-  gap: 0;
   padding: 0;
+  gap: 0;
 }
 
 .settings-row {
