@@ -47,11 +47,8 @@
       <button class="nav-item active" onclick="showTab('dashboard', this)">
         <span class="nav-icon">⊞</span> Dashboard
       </button>
-      <button class="nav-item" onclick="showTab('checkout', this)">
-        <span class="nav-icon">↑</span> Check Out
-      </button>
-      <button class="nav-item" onclick="showTab('checkin', this)">
-        <span class="nav-icon">↓</span> Check In
+      <button class="nav-item" data-tab="checkpage" onclick="showTab('checkpage', this)">
+        <span class="nav-icon">⇅</span> Check Out / In
       </button>
       <button class="nav-item" onclick="showTab('report', this)">
         <span class="nav-icon">☰</span> Report
@@ -111,10 +108,10 @@
 
       <div class="section-label">Quick Actions</div>
       <div class="quick-actions">
-        <button class="btn btn-primary btn-action" onclick="showTab('checkout', document.querySelector('[data-tab=checkout]'))">
+        <button class="btn btn-primary btn-action" onclick="showTab('checkpage', document.querySelector('[data-tab=checkpage]'))">
           ↑ Check Out Chromebook
         </button>
-        <button class="btn btn-secondary btn-action" onclick="showTab('checkin', document.querySelector('[data-tab=checkin]'))">
+        <button class="btn btn-secondary btn-action" onclick="showTab('checkpage', document.querySelector('[data-tab=checkpage]'))">
           ↓ Check In Chromebook
         </button>
       </div>
@@ -125,48 +122,56 @@
       </div>
     </div>
 
-    <!-- CHECKOUT TAB -->
-    <div id="checkout" class="tab">
+    <!-- COMBINED CHECK OUT / CHECK IN TAB -->
+    <div id="checkpage" class="tab">
       <div class="page-header">
-        <h2 class="page-title">Check Out Chromebook</h2>
+        <h2 class="page-title">Check Out / Check In</h2>
       </div>
-      <div class="form-card">
-        <div class="field-group">
-          <label class="field-label">Chromebook Barcode</label>
-          <input id="coNum" placeholder="Scan or type barcode / number">
+      <div class="check-split">
+
+        <!-- CHECK OUT -->
+        <div class="form-card">
+          <div class="form-card-heading">
+            <span class="form-card-icon form-card-icon--out">↑</span>
+            <span class="form-card-label">Check Out</span>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Chromebook Barcode</label>
+            <input id="coNum" placeholder="Scan or type barcode / number">
+          </div>
+          <button class="btn btn-ghost btn-scan" onclick="scanCheckoutBarcode()">⬛ Scan Chromebook</button>
+
+          <div class="field-group">
+            <label class="field-label">Student ID</label>
+            <input id="coStudent" placeholder="Enter student ID">
+          </div>
+          <button class="btn btn-ghost btn-scan" onclick="scanStudentID()">⬛ Scan Student ID</button>
+
+          <div class="field-group">
+            <label class="field-label">Notes</label>
+            <input id="coNotes" placeholder="Optional notes (e.g. broken key)">
+          </div>
+
+          <button class="btn btn-primary btn-full btn-lg" onclick="checkout()">CHECK OUT</button>
+          <div id="coMsg" class="msg"></div>
         </div>
-        <button class="btn btn-ghost btn-scan" onclick="scanCheckoutBarcode()">⬛ Scan Chromebook</button>
 
-        <div class="field-group">
-          <label class="field-label">Student ID</label>
-          <input id="coStudent" placeholder="Enter student ID">
+        <!-- CHECK IN -->
+        <div class="form-card">
+          <div class="form-card-heading">
+            <span class="form-card-icon form-card-icon--in">↓</span>
+            <span class="form-card-label">Check In</span>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Chromebook Barcode</label>
+            <input id="ciNum" placeholder="Scan or type barcode / number">
+          </div>
+          <button class="btn btn-ghost btn-scan" onclick="scanCheckinBarcode()">⬛ Scan Chromebook</button>
+
+          <button class="btn btn-primary btn-full btn-lg" style="margin-top: 8px;" onclick="checkin()">CHECK IN</button>
+          <div id="ciMsg" class="msg"></div>
         </div>
-        <button class="btn btn-ghost btn-scan" onclick="scanStudentID()">⬛ Scan Student ID</button>
 
-        <div class="field-group">
-          <label class="field-label">Notes</label>
-          <input id="coNotes" placeholder="Optional notes (e.g. broken key)">
-        </div>
-
-        <button class="btn btn-primary btn-full btn-lg" onclick="checkout()">CHECK OUT</button>
-        <div id="coMsg" class="msg"></div>
-      </div>
-    </div>
-
-    <!-- CHECKIN TAB -->
-    <div id="checkin" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">Check In Chromebook</h2>
-      </div>
-      <div class="form-card">
-        <div class="field-group">
-          <label class="field-label">Chromebook Barcode</label>
-          <input id="ciNum" placeholder="Scan or type barcode / number">
-        </div>
-        <button class="btn btn-ghost btn-scan" onclick="scanCheckinBarcode()">⬛ Scan Chromebook</button>
-
-        <button class="btn btn-primary btn-full btn-lg" onclick="checkin()">CHECK IN</button>
-        <div id="ciMsg" class="msg"></div>
       </div>
     </div>
 
@@ -280,10 +285,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('cbLoggedIn')) {
     showApp(localStorage.getItem('cbLoggedIn'));
   }
-
-  // Attach data-tab attributes for quick action buttons
   document.querySelectorAll('.nav-item').forEach(btn => {
-    const match = btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
+    const match = btn.getAttribute('onclick') && btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
     if (match) btn.setAttribute('data-tab', match[1]);
   });
 });
@@ -333,9 +336,6 @@ async function loadDashboard() {
     const total   = rows.length;
     const outRows = rows.filter(r => r.status === 'Out');
     const inCount = total - outRows.length;
-
-    // Sort overdue (longest out first) — reuse days logic
-    const sorted = [...outRows].sort((a, b) => daysSince(a.checkoutDate) - daysSince(b.checkoutDate));
     const overdue = outRows.filter(r => daysSince(r.checkoutDate) > 0);
 
     document.getElementById('statTotal').textContent   = total;
@@ -343,15 +343,12 @@ async function loadDashboard() {
     document.getElementById('statOut').textContent     = outRows.length;
     document.getElementById('statOverdue').textContent = overdue.length;
 
-    // Recent activity: last 5 transactions across all rows
     const activity = [];
     rows.forEach(r => {
-      if (r.checkoutDate && r.checkoutDate !== '—') {
+      if (r.checkoutDate && r.checkoutDate !== '—')
         activity.push({ date: r.checkoutDate, text: `#${r.cbNum} checked out to ${r.studentId}`, type: 'out' });
-      }
-      if (r.checkinDate && r.checkinDate !== '—') {
+      if (r.checkinDate && r.checkinDate !== '—')
         activity.push({ date: r.checkinDate, text: `#${r.cbNum} returned`, type: 'in' });
-      }
     });
 
     const list = document.getElementById('activityList');
@@ -511,7 +508,6 @@ async function loadCheckedOut() {
 
 // ── HISTORY ──────────────────────────────────────────────
 async function viewHistory(cbNum) {
-  // Show history nav button and activate it
   const histBtn = document.getElementById('historyNavBtn');
   histBtn.style.display = '';
 
@@ -522,7 +518,6 @@ async function viewHistory(cbNum) {
 
   document.getElementById('historyTitle').textContent = `Chromebook #${cbNum}`;
 
-  // Populate meta from allReportRows if available
   const row = allReportRows.find(r => String(r.cbNum) === String(cbNum));
   const meta = document.getElementById('historyMeta');
   if (row) {
