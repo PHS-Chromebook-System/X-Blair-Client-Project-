@@ -129,33 +129,89 @@
       </div>
       <div class="check-split">
 
-        <!-- CHECK OUT -->
-        <div class="form-card">
-          <div class="form-card-heading">
-            <span class="form-card-icon form-card-icon--out">↑</span>
-            <span class="form-card-label">Check Out</span>
-          </div>
-          <div class="field-group">
-            <label class="field-label" for="coNum">Chromebook Barcode</label>
-            <input id="coNum" placeholder="Scan or type barcode / number">
-          </div>
-          <button class="btn btn-scan" onclick="scanCheckoutBarcode()">Scan Chromebook</button>
+       // ── CHECKOUT ──────────────────────────────────────────────
+async function checkout() {
+  const cbNum = document.getElementById('coNum').value.trim();
+  const stuId = document.getElementById('coStudent').value.trim();
+  const notes = document.getElementById('coNotes').value.trim();
+  const msg   = document.getElementById('coMsg');
+  if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
 
-          <div class="field-group">
-            <label class="field-label" for="coStudent">Student ID</label>
-            <input id="coStudent" placeholder="Enter student ID">
-          </div>
-          <button class="btn btn-scan" onclick="scanStudentID()">Scan Student ID</button>
+  showMsg(msg, 'Checking student records...', '');
 
-          <div class="field-group">
-            <label class="field-label" for="coNotes">Notes</label>
-            <input id="coNotes" placeholder="Optional notes (e.g. broken key)">
-          </div>
+  // Check if this student already has a Chromebook checked out
+  try {
+    const checkRes  = await fetch(SCRIPT_URL + '?action=report');
+    const checkData = await checkRes.json();
+    const rows = checkData.rows || [];
+    const alreadyOut = rows.find(r => r.status === 'Out' && String(r.studentId) === String(stuId));
 
-          <button class="btn btn-primary btn-full btn-lg" onclick="checkout()">CHECK OUT</button>
-          <div id="coMsg" class="msg"></div>
+    if (alreadyOut) {
+      showMsg(msg, '', '');
+      const proceed = await confirmDuplicateCheckout(stuId, alreadyOut.cbNum);
+      if (!proceed) {
+        showMsg(msg, 'Checkout cancelled.', 'error');
+        return;
+      }
+    }
+  } catch (e) {
+    // if the check itself fails, don't block checkout — just continue
+  }
+
+  showMsg(msg, 'Saving...', '');
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
+      document.getElementById('coNum').value = '';
+      document.getElementById('coStudent').value = '';
+      document.getElementById('coNotes').value = '';
+      document.getElementById('coNum').focus();
+    } else {
+      showMsg(msg, data.message || 'Error.', 'error');
+    }
+  } catch(e) {
+    showMsg(msg, 'Connection error.', 'error');
+  }
+}
+
+// ── DUPLICATE CHECKOUT CONFIRMATION ──────────────────────────────────
+function confirmDuplicateCheckout(stuId, existingCbNum) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.id = 'dupConfirmModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-box">
+          <h3 class="modal-title">⚠️ Student Already Has a Chromebook</h3>
+          <p class="modal-body">
+            Student <strong>${stuId}</strong> already has Chromebook
+            <strong>#${existingCbNum}</strong> checked out.
+            Are you sure you want to give this student another Chromebook?
+          </p>
+          <div class="modal-actions">
+            <button class="btn btn-danger" id="dupYesBtn">Yes, Continue</button>
+            <button class="btn btn-ghost" id="dupNoBtn">No, Cancel</button>
+          </div>
         </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
 
+    document.getElementById('dupYesBtn').onclick = () => {
+      modal.remove();
+      resolve(true);
+    };
+    document.getElementById('dupNoBtn').onclick = () => {
+      modal.remove();
+      resolve(false);
+    };
+  });
+}
         <!-- CHECK IN -->
         <div class="form-card">
           <div class="form-card-heading">
