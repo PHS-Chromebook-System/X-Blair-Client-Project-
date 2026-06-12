@@ -1,367 +1,664 @@
-const SHEET_ID = '1vl2QdtUazaNVgfiSdklPwqg-qAOurJ9VcVMzOZPUMHg';
-const OVERDUE_SHEET = 'Overdue Chromes';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poolesville Chromebook Management Portal</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
 
-function doGet(e) {
-  const action = e.parameter.action;
-  if (action === 'report')  return getReport();
-  if (action === 'overdue') return getOverdue();
-  if (action === 'history') return getHistory(e.parameter.cbNum);
-  return ContentService.createTextOutput('Invalid').setMimeType(ContentService.MimeType.TEXT);
-}
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-wrapper">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">📚</div>
+      <h1 class="login-title">Poolesville High School</h1>
+      <p class="login-sub">Chromebook Management Portal</p>
+      <p class="login-tagline">Asset Tracking &amp; Checkout System</p>
+    </div>
+    <div class="login-form">
+      <div class="field-group">
+        <label class="field-label">School Name</label>
+        <input id="username" placeholder="e.g. Poolesville High School" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Access Key</label>
+        <input id="password" type="password" placeholder="Enter shared access key">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="login()">Sign In</button>
+      <div id="loginMsg" class="msg"></div>
+    </div>
+  </div>
+</div>
 
-function resetCbHistory(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(String(data.cbNum));
+<!-- MAIN APP -->
+<div id="app" class="hidden app-layout">
 
-  if (!sheet) {
-    return jsonResponse({ success: false, message: 'Chromebook sheet not found.' });
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-logo">📚</span>
+      <span class="sidebar-title">PHS Portal</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showTab('dashboard', this)">
+        <span class="nav-icon">⊞</span> Dashboard
+      </button>
+      <button class="nav-item" data-tab="checkpage" onclick="showTab('checkpage', this)">
+        <span class="nav-icon">⇅</span> Check Out / In
+      </button>
+      <button class="nav-item" onclick="showTab('report', this)">
+        <span class="nav-icon">☰</span> Report
+      </button>
+      <button class="nav-item" onclick="showTab('checkedout', this)">
+        <span class="nav-icon">◉</span> Checked Out
+      </button>
+      <button class="nav-item" onclick="showTab('history', this)" id="historyNavBtn" style="display:none;">
+        <span class="nav-icon">↺</span> History
+      </button>
+      <button class="nav-item" onclick="showTab('settings', this)">
+        <span class="nav-icon">⚙</span> Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="signed-in-label">Signed in as</div>
+      <div class="signed-in-name" id="sidebarUser">IT Staff</div>
+      <button class="btn btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TOP BAR (mobile) -->
+    <div class="topbar-mobile">
+      <span class="topbar-title">Poolesville Chromebook Portal</span>
+      <button class="btn btn-ghost" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="dashboard" class="tab active">
+      <div class="page-header">
+        <h2 class="page-title">Dashboard</h2>
+        <p class="page-subtitle">Poolesville Chromebook Management Portal</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-in" id="statIn">—</div>
+          <div class="stat-label">In</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-out" id="statOut">—</div>
+          <div class="stat-label">Out</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-overdue" id="statOverdue">—</div>
+          <div class="stat-label">Overdue</div>
+        </div>
+      </div>
+
+      <div class="section-label">Quick Actions</div>
+      <div class="quick-actions">
+        <button class="btn btn-primary btn-action" onclick="showTab('checkpage', document.querySelector('[data-tab=checkpage]'))">
+          ↑ Check Out Chromebook
+        </button>
+        <button class="btn btn-secondary btn-action" onclick="showTab('checkpage', document.querySelector('[data-tab=checkpage]'))">
+          ↓ Check In Chromebook
+        </button>
+      </div>
+
+      <div class="section-label">Recent Activity</div>
+      <div class="activity-list" id="activityList">
+        <div class="activity-loading">Loading activity...</div>
+      </div>
+    </div>
+
+    <!-- COMBINED CHECK OUT / CHECK IN TAB -->
+    <div id="checkpage" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Check Out / Check In</h2>
+      </div>
+      <div class="check-split">
+
+        <!-- CHECK OUT -->
+        <div class="form-card">
+          <div class="form-card-heading">
+            <span class="form-card-icon form-card-icon--out">↑</span>
+            <span class="form-card-label">Check Out</span>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="coNum">Chromebook Barcode</label>
+            <input id="coNum" placeholder="Scan or type barcode / number">
+          </div>
+          <button class="btn btn-scan" onclick="scanCheckoutBarcode()">Scan Chromebook</button>
+
+          <div class="field-group">
+            <label class="field-label" for="coStudent">Student ID</label>
+            <input id="coStudent" placeholder="Enter student ID">
+          </div>
+          <button class="btn btn-scan" onclick="scanStudentID()">Scan Student ID</button>
+
+          <div class="field-group">
+            <label class="field-label" for="coNotes">Notes</label>
+            <input id="coNotes" placeholder="Optional notes (e.g. broken key)">
+          </div>
+
+          <button class="btn btn-primary btn-full btn-lg" onclick="checkout()">CHECK OUT</button>
+          <div id="coMsg" class="msg"></div>
+        </div>
+
+        <!-- CHECK IN -->
+        <div class="form-card">
+          <div class="form-card-heading">
+            <span class="form-card-icon form-card-icon--in">↓</span>
+            <span class="form-card-label">Check In</span>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="ciNum">Chromebook Barcode</label>
+            <input id="ciNum" placeholder="Scan or type barcode / number">
+          </div>
+          <button class="btn btn-scan" onclick="scanCheckinBarcode()">Scan Chromebook</button>
+
+          <button class="btn btn-primary btn-full btn-lg" style="margin-top: 8px;" onclick="checkin()">CHECK IN</button>
+          <div id="ciMsg" class="msg"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- REPORT TAB -->
+    <div id="report" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Chromebook Inventory Report</h2>
+      </div>
+      <div class="toolbar">
+        <input id="reportSearch" placeholder="Search by Chromebook #" oninput="filterReport()" class="search-input">
+        <button class="btn btn-ghost" onclick="printReport()">🖨 Print Report</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>CB #</th>
+              <th>Barcode</th>
+              <th>Serial #</th>
+              <th>Student ID</th>
+              <th>Checked Out</th>
+              <th>Checked In</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="history" class="tab">
+      <div class="page-header">
+        <button class="btn btn-ghost btn-back" onclick="showTab('report', document.querySelector('.nav-item[onclick*=report]'))">← Back to Report</button>
+        <h2 class="page-title" id="historyTitle">Chromebook History</h2>
+        <div id="historyMeta" class="history-meta"></div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Date Signed Out</th>
+              <th>Date Returned</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CHECKED OUT TAB -->
+    <div id="checkedout" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Currently Checked Out Chromebooks</h2>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>CB #</th>
+              <th>Barcode</th>
+              <th>Serial #</th>
+              <th>Student ID</th>
+              <th>Date Signed Out</th>
+              <th>Days Out</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="checkedoutBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="settings" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Settings</h2>
+      </div>
+      <div class="form-card settings-card">
+        <div class="settings-row">
+          <div class="settings-desc">
+            <div class="settings-label">Reset Chromebook History</div>
+            <div class="settings-hint">Permanently clears the checkout history of every Chromebook. This cannot be undone.</div>
+          </div>
+          <button class="btn btn-danger" onclick="confirmResetAll()">Reset Chromebook History</button>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-row">
+          <div class="settings-desc">
+            <div class="settings-label">Export Report</div>
+            <div class="settings-hint">Download the full inventory report as a printable page.</div>
+          </div>
+          <button class="btn btn-ghost" onclick="printReport()">Export Report</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziHdx63ZMyF5rT914wq9cZ1hptwsPaQts9xmB7-bB2SMimtZcVC0z84em_lFneAWhN/exec';
+const ACCESS_KEY = 'chromebook';
+
+let allReportRows = [];
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('cbLoggedIn')) {
+    showApp(localStorage.getItem('cbLoggedIn'));
   }
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 3) {
-    sheet.deleteRows(4, lastRow - 3);
-  }
-
-  return jsonResponse({ success: true });
-}
-
-function resetAllHistory() {
-  try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const main = ss.getSheetByName('Main');
-    if (!main) return jsonResponse({ success: false, message: 'Main sheet not found.' });
-
-    const mainRows = main.getDataRange().getValues();
-
-    for (let i = 1; i < mainRows.length; i++) {
-      const cbNum = mainRows[i][0];
-      if (!cbNum) continue;
-
-      const sheet = ss.getSheetByName(String(cbNum));
-      if (!sheet) continue;
-
-      const lastRow = sheet.getLastRow();
-      if (lastRow > 3) {
-        sheet.deleteRows(4, lastRow - 3);
-      }
-    }
-
-    return jsonResponse({ success: true });
-  } catch(err) {
-    return jsonResponse({ success: false, message: err.message });
-  }
-}
-
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    if (data.action === 'checkout')        return checkOut(data);
-    if (data.action === 'checkin')         return checkIn(data);
-    if (data.action === 'resetHistory')    return resetCbHistory(data);
-    if (data.action === 'resetAllHistory') return resetAllHistory();
-    return jsonResponse({ success: false, message: 'Unknown action' });
-  } catch(err) {
-    return jsonResponse({ success: false, message: 'Parse error: ' + err.message });
-  }
-}
-
-function formatDate(val) {
-  if (!val) return '—';
-  const d = new Date(val);
-  if (isNaN(d)) return val;
-  return (d.getMonth()+1).toString().padStart(2,'0') + '/' +
-         d.getDate().toString().padStart(2,'0') + '/' +
-         d.getFullYear();
-}
-
-function isOverdue(checkoutDate) {
-  if (!checkoutDate) return false;
-  const co = new Date(checkoutDate);
-  const today = new Date();
-  co.setHours(0,0,0,0);
-  today.setHours(0,0,0,0);
-  return co < today;
-}
-
-function getHistory(cbNum) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(String(cbNum));
-
-  if (!sheet) {
-    return jsonResponse({ rows: [] });
-  }
-
-  const data = sheet.getDataRange().getValues();
-  const rows = [];
-
-  for (let i = data.length - 1; i >= 3; i--) {
-    if (!data[i][0]) continue;
-
-    rows.push({
-      studentId: data[i][0],
-      checkoutDate: formatDate(data[i][1]),
-      checkinDate: data[i][2] ? formatDate(data[i][2]) : '—',
-      notes: data[i][5] || ''
-    });
-  }
-
-  return jsonResponse({ rows: rows });
-}
-
-function daysSince(checkoutDate) {
-  if (!checkoutDate) return 0;
-  const co = new Date(checkoutDate);
-  const today = new Date();
-  co.setHours(0,0,0,0);
-  today.setHours(0,0,0,0);
-  return Math.floor((today - co) / (1000 * 60 * 60 * 24));
-}
-
-function addToOverdue(cbNum, barcode, studentId, checkoutDate) {
-  const ss    = SpreadsheetApp.openById(SHEET_ID);
-  let sheet   = ss.getSheetByName(OVERDUE_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(OVERDUE_SHEET);
-    sheet.appendRow(['CB #', 'Barcode', 'Student ID', 'Date Signed Out']);
-  }
-  const rows = sheet.getDataRange().getValues();
-  // Don't add duplicates
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === String(cbNum)) return;
-  }
-  sheet.appendRow([cbNum, barcode, studentId, checkoutDate]);
-}
-
-function removeFromOverdue(cbNum) {
-  const ss    = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(OVERDUE_SHEET);
-  if (!sheet) return;
-  const rows = sheet.getDataRange().getValues();
-  for (let i = rows.length - 1; i >= 1; i--) {
-    if (String(rows[i][0]) === String(cbNum)) {
-      sheet.deleteRow(i + 1);
-    }
-  }
-}
-
-function checkOut(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-
-  const main = ss.getSheetByName('Main');
-  const mainRows = main.getDataRange().getValues();
-
-  let actualCbNum = data.cbNum;
-
-  for (let i = 1; i < mainRows.length; i++) {
-    if (String(mainRows[i][1]).trim() === String(data.cbNum).trim()) {
-      actualCbNum = String(mainRows[i][0]);
-      break;
-    }
-  }
-
-  const sheet = ss.getSheetByName(String(actualCbNum));
-
-  if (!sheet) {
-    return jsonResponse({
-      success: false,
-      message: `No Chromebook found for barcode ${data.cbNum}.`
-    });
-  }
-
-  const rows = sheet.getDataRange().getValues();
-
-  let latest = null;
-
-for (let i = rows.length - 1; i >= 3; i--) {
-  if (rows[i][0]) {
-    latest = rows[i];
-    break;
-  }
-}
-
-if (latest && !latest[2]) {
-  return jsonResponse({
-    success: false,
-    message: `Chromebook #${actualCbNum} is already checked out to ${latest[0]}.`
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    const match = btn.getAttribute('onclick') && btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
+    if (match) btn.setAttribute('data-tab', match[1]);
   });
+});
+
+function showApp(user) {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('sidebarUser').textContent = user;
+  loadDashboard();
 }
 
-  sheet.appendRow([
-    data.studentId,
-    data.checkoutDate,
-    '',
-    '',
-    '',
-    data.notes || ''
-  ]);
-
-  return jsonResponse({ success: true });
+function login() {
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  const msg  = document.getElementById('loginMsg');
+  if (!user) { showMsg(msg, 'Please enter your school name.', 'error'); return; }
+  if (!pass) { showMsg(msg, 'Please enter the access key.', 'error'); return; }
+  if (pass !== ACCESS_KEY) { showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return; }
+  localStorage.setItem('cbLoggedIn', user);
+  showApp(user);
 }
 
+function logout() {
+  localStorage.removeItem('cbLoggedIn');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
 
-function checkIn(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  if (btn) btn.classList.add('active');
 
-  const main = ss.getSheetByName('Main');
-  const mainRows = main.getDataRange().getValues();
+  if (name === 'dashboard')  loadDashboard();
+  if (name === 'report')     loadReport();
+  if (name === 'checkedout') loadCheckedOut();
+}
 
-  let actualCbNum = data.cbNum;
+// ── DASHBOARD ──────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = data.rows || [];
 
-  for (let i = 1; i < mainRows.length; i++) {
-    if (String(mainRows[i][1]).trim() === String(data.cbNum).trim()) {
-      actualCbNum = String(mainRows[i][0]);
-      break;
-    }
-  }
+    const total   = rows.length;
+    const outRows = rows.filter(r => r.status === 'Out');
+    const inCount = total - outRows.length;
+    const overdue = outRows.filter(r => daysSince(r.checkoutDate) > 0);
 
-  const sheet = ss.getSheetByName(String(actualCbNum));
+    document.getElementById('statTotal').textContent   = total;
+    document.getElementById('statIn').textContent      = inCount;
+    document.getElementById('statOut').textContent     = outRows.length;
+    document.getElementById('statOverdue').textContent = overdue.length;
 
-  if (!sheet) {
-    return jsonResponse({
-      success: false,
-      message: `No Chromebook found for barcode ${data.cbNum}.`
+    const activity = [];
+    rows.forEach(r => {
+      if (r.checkoutDate && r.checkoutDate !== '—')
+        activity.push({ date: r.checkoutDate, text: `#${r.cbNum} checked out to ${r.studentId}`, type: 'out' });
+      if (r.checkinDate && r.checkinDate !== '—')
+        activity.push({ date: r.checkinDate, text: `#${r.cbNum} returned`, type: 'in' });
     });
-  }
 
-  const rows = sheet.getDataRange().getValues();
-for (let i = rows.length - 1; i >= 3; i--) {
-  if (rows[i][0] && !rows[i][2]) {
-      const rowNum = i + 1;
+    const parseDate = s => { const p = s.split('/'); return new Date(p[2], p[0]-1, p[1]); };
+    activity.sort((a, b) => parseDate(b.date) - parseDate(a.date));
 
-      sheet.getRange(rowNum, 3).setValue(data.checkinDate);
-
-      removeFromOverdue(actualCbNum);
-
-      return jsonResponse({
-        success: true,
-        studentId: rows[i][0]
-      });
-    }
-  }
-
-  return jsonResponse({
-    success: false,
-    message: `Chromebook #${actualCbNum} is not currently checked out.`
-  });
-}
-
-
-function getReport() {
-  const ss       = SpreadsheetApp.openById(SHEET_ID);
-  const main     = ss.getSheetByName('Main');
-  const mainRows = main.getDataRange().getValues();
-  const result   = [];
-  for (let i = 1; i < mainRows.length; i++) {
-    const cbNum   = mainRows[i][0];
-    const barcode = mainRows[i][1];
-    const serial  = mainRows[i][2];
-    if (!cbNum) continue;
-    const sheet = ss.getSheetByName(String(cbNum));
-    if (!sheet) continue;
-    const lastRow = sheet.getLastRow();
-  const rows = sheet.getRange(1, 1, lastRow, 6).getValues();
-    let latest = null;
-
-for (let j = rows.length - 1; j >= 3; j--) {
-  if (rows[j][0]) {
-    latest = rows[j];
-    break;
-  }
-}
-    if (latest) {
-      const isOut = !latest[2];
-      // Auto-add to overdue if out and overdue
-     /* if (isOut && isOverdue(latest[1])) {
-        addToOverdue(cbNum, barcode, latest[0], formatDate(latest[1]));
-      }*/
-      result.push({
-        cbNum, barcode, serial,
-        studentId:    latest[0],
-        checkoutDate: formatDate(latest[1]),
-        checkinDate:  latest[2] ? formatDate(latest[2]) : '—',
-        notes:        latest[5] || '',
-        status:       isOut ? 'Out' : 'In'
-      });
+    const list = document.getElementById('activityList');
+    if (!activity.length) {
+      list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
     } else {
-      result.push({
-        cbNum, barcode, serial,
-        studentId: '—', checkoutDate: '—', checkinDate: '—',
-        notes: '', status: 'In'
-      });
+      list.innerHTML = activity.slice(0, 8).map(a => `
+        <div class="activity-item">
+          <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
+          <span class="activity-text">${a.text}</span>
+          <span class="activity-date">${a.date}</span>
+        </div>
+      `).join('');
     }
+  } catch(e) {
+    document.getElementById('activityList').innerHTML = '<div class="activity-empty">Could not load data.</div>';
   }
-  return jsonResponse({ rows: result });
 }
 
-function getOverdue() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const main = ss.getSheetByName('Main');
-  const mainRows = main.getDataRange().getValues();
+function daysSince(dateStr) {
+  if (!dateStr || dateStr === '—') return 0;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return 0;
+  const d = new Date(parts[2], parts[0]-1, parts[1]);
+  const today = new Date();
+  d.setHours(0,0,0,0); today.setHours(0,0,0,0);
+  return Math.floor((today - d) / 86400000);
+}
 
-  const result = [];
-
-  for (let i = 1; i < mainRows.length; i++) {
-    const cbNum = mainRows[i][0];
-    const barcode = mainRows[i][1];
-
-    if (!cbNum) continue;
-
-    const sheet = ss.getSheetByName(String(cbNum));
-    if (!sheet) continue;
-
-    const lastRow = sheet.getLastRow();
-const rows = sheet.getRange(1, 1, lastRow, 6).getValues();
-
-    let latest = null;
-
-    for (let j = rows.length - 1; j >= 3; j--) {
-      if (rows[j][0]) {
-        latest = rows[j];
-        break;
-      }
+// ── CHECKOUT ──────────────────────────────────────────────
+async function checkout() {
+  const cbNum = document.getElementById('coNum').value.trim();
+  const stuId = document.getElementById('coStudent').value.trim();
+  const notes = document.getElementById('coNotes').value.trim();
+  const msg   = document.getElementById('coMsg');
+  if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
+  showMsg(msg, 'Saving...', '');
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
+      document.getElementById('coNum').value = '';
+      document.getElementById('coStudent').value = '';
+      document.getElementById('coNotes').value = '';
+      document.getElementById('coNum').focus();
+    } else {
+      showMsg(msg, data.message || 'Error.', 'error');
     }
+  } catch(e) {
+    showMsg(msg, 'Connection error.', 'error');
+  }
+}
 
-    if (!latest) continue;
-
-    const isOut = !latest[2];
-
-    if (isOut) {
-      result.push({
-        cbNum: cbNum,
-        barcode: barcode || '—',
-        studentId: latest[0],
-        checkoutDate: formatDate(latest[1]),
-        daysOverdue: daysSince(latest[1])
-      });
+// ── CHECKIN ──────────────────────────────────────────────
+async function checkin() {
+  const cbNum = document.getElementById('ciNum').value.trim();
+  const msg   = document.getElementById('ciMsg');
+  if (!cbNum) { showMsg(msg, 'Enter Chromebook #.', 'error'); return; }
+  showMsg(msg, 'Saving...', '');
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today() })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msg, `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`, 'success');
+      document.getElementById('ciNum').value = '';
+      document.getElementById('ciNum').focus();
+    } else {
+      showMsg(msg, data.message || 'Error.', 'error');
     }
+  } catch(e) {
+    showMsg(msg, 'Connection error.', 'error');
+  }
+}
+
+// ── REPORT ──────────────────────────────────────────────
+async function loadReport() {
+  const tbody = document.getElementById('reportBody');
+  if (!tbody) return;
+  const searchEl = document.getElementById('reportSearch');
+  if (searchEl) searchEl.value = '';
+  tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Loading...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    allReportRows = data.rows || [];
+    renderReport(allReportRows);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-error">Could not load data.</td></tr>';
+  }
+}
+
+function renderReport(rows) {
+  const tbody = document.getElementById('reportBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No records yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
+      <td>${r.barcode || '—'}</td>
+      <td>${r.serial || '—'}</td>
+      <td>${r.studentId}</td>
+      <td>${r.checkoutDate}</td>
+      <td>${r.checkinDate}</td>
+      <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in-green'}">${r.status}</span></td>
+      <td>${r.notes || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function filterReport() {
+  const q = document.getElementById('reportSearch').value.toLowerCase();
+  if (!allReportRows.length) { loadReport(); return; }
+  if (!q) { renderReport(allReportRows); return; }
+  const filtered = allReportRows.filter(r =>
+    String(r.cbNum).toLowerCase().includes(q)
+  );
+  renderReport(filtered);
+}
+
+// ── CHECKED OUT ──────────────────────────────────────────────
+async function loadCheckedOut() {
+  const tbody = document.getElementById('checkedoutBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = (data.rows || []).filter(r => r.status === 'Out');
+    rows.sort((a, b) => daysSince(b.checkoutDate) - daysSince(a.checkoutDate));
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="table-empty">✓ All Chromebooks are currently checked in.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
+        <td>${r.barcode || '—'}</td>
+        <td>${r.serial || '—'}</td>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td><span class="badge badge-out">${daysSince(r.checkoutDate)}</span></td>
+        <td>${r.notes || '—'}</td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
+  }
+}
+
+// ── HISTORY ──────────────────────────────────────────────
+async function viewHistory(cbNum) {
+  const histBtn = document.getElementById('historyNavBtn');
+  histBtn.style.display = '';
+
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('history').classList.add('active');
+  histBtn.classList.add('active');
+
+  document.getElementById('historyTitle').textContent = `Chromebook #${cbNum}`;
+
+  const row = allReportRows.find(r => String(r.cbNum) === String(cbNum));
+  const meta = document.getElementById('historyMeta');
+  if (row) {
+    const statusClass = row.status === 'Out' ? 'badge-out' : 'badge-in';
+    const statusIcon  = row.status === 'Out' ? '🔴' : '🟢';
+    meta.innerHTML = `
+      <span>Barcode: <strong>${row.barcode || '—'}</strong></span>
+      <span>Serial #: <strong>${row.serial || '—'}</strong></span>
+      <span>Current Status: <span class="badge ${statusClass}">${statusIcon} ${row.status}</span></span>
+    `;
+  } else {
+    meta.innerHTML = '';
   }
 
-  // Sort longest checked-out first
-  result.sort((a, b) => b.daysOverdue - a.daysOverdue);
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = '<tr><td colspan="4" class="table-loading">Loading...</td></tr>';
 
-  return jsonResponse({ rows: result });
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=history&cbNum=' + encodeURIComponent(cbNum));
+    const data = await res.json();
+    if (!data.rows || !data.rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No history found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.rows.map(r => `
+      <tr>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td>${r.checkinDate}</td>
+        <td>${r.notes || '—'}</td>
+      </tr>
+    `).join('');
+  } catch(err) {
+    tbody.innerHTML = '<tr><td colspan="4" class="table-error">Could not load history.</td></tr>';
+  }
 }
 
-function jsonResponse(obj) {
-  const output = ContentService.createTextOutput(JSON.stringify(obj));
-  output.setMimeType(ContentService.MimeType.JSON);
-  return output;
+// ── SETTINGS / RESET ──────────────────────────────────────────────
+function confirmResetAll() {
+  const modal = document.createElement('div');
+  modal.id = 'confirmModal';
+  modal.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">⚠️ Reset All History</h3>
+        <p class="modal-body">Are you sure you want to clear the history of <strong>every Chromebook</strong>? This cannot be undone.</p>
+        <div class="modal-actions">
+          <button class="btn btn-danger" onclick="resetAllHistory()">Yes, Reset All</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('confirmModal').remove()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
-function scanCheckoutBarcode() {
-  const barcode = prompt("Enter Chromebook Barcode:");
-
-  if (!barcode) return;
-
-  document.getElementById("coNum").value = barcode;
+async function resetAllHistory() {
+  document.getElementById('confirmModal').remove();
+  const tbody = document.getElementById('reportBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Resetting all histories...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAllHistory' }) });
+    const data = await res.json();
+    if (data.success) { loadReport(); }
+    else if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="table-error">Error: ${data.message}</td></tr>`;
+  } catch(e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
+  }
 }
 
-function scanCheckinBarcode() {
-  const barcode = prompt("Enter Chromebook Barcode:");
+// ── SCANNER ──────────────────────────────────────────────
+let html5Scanner = null;
+let currentTarget = null;
 
-  if (!barcode) return;
+function scanCheckoutBarcode() { startCameraScan('coNum'); }
+function scanCheckinBarcode()  { startCameraScan('ciNum'); }
+function scanStudentID()       { startCameraScan('coStudent'); }
 
-  document.getElementById("ciNum").value = barcode;
+function startCameraScan(targetField) {
+  currentTarget = targetField;
+  const modal = document.createElement('div');
+  modal.id = 'scannerModal';
+  modal.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">Scan Barcode</h3>
+        <div id="reader"></div>
+        <button class="btn btn-danger btn-full" style="margin-top:15px;" onclick="stopScanner()">Cancel — Type Instead</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  html5Scanner = new Html5Qrcode("reader");
+  html5Scanner.start(
+    { facingMode: "environment" },
+    { fps: 15, qrbox: { width: 350, height: 150 } },
+    (decodedText) => {
+      document.getElementById(currentTarget).value = decodedText.trim();
+      stopScanner();
+    },
+    () => {}
+  );
 }
 
+function stopScanner() {
+  const modal = document.getElementById('scannerModal');
+  if (html5Scanner) {
+    try {
+      html5Scanner.stop().then(() => { html5Scanner.clear(); html5Scanner = null; if (modal) modal.remove(); })
+        .catch(() => { if (modal) modal.remove(); html5Scanner = null; });
+    } catch { if (modal) modal.remove(); html5Scanner = null; }
+  } else { if (modal) modal.remove(); }
+}
 
+// ── PRINT ──────────────────────────────────────────────
+function printReport() {
+  const reportContent = document.getElementById('report').innerHTML;
+  const pw = window.open('', '_blank');
+  pw.document.write(`
+    <html><head><title>Chromebook Report</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
+    </head><body><h1>Poolesville Chromebook Report</h1>${reportContent}</body></html>
+  `);
+  pw.document.close();
+  pw.focus();
+  setTimeout(() => pw.print(), 500);
+}
+
+// ── UTILS ──────────────────────────────────────────────
+function today() {
+  return new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+</script>
+</body>
+</html>
