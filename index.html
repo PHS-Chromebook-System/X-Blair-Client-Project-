@@ -626,6 +626,54 @@ function startCameraScan(targetField) {
   );
 }
 
+  function sendAllOverdueEmails() {
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const main = ss.getSheetByName('Main');
+
+  const rows = main.getDataRange().getValues();
+
+  for (let i = 1; i < rows.length; i++) {
+
+    const cbNum = rows[i][0];
+    const barcode = rows[i][1];
+    const email = rows[i][3]; // Email column
+
+    if (!cbNum || !email) continue;
+
+    const sheet = ss.getSheetByName(String(cbNum));
+
+    if (!sheet) continue;
+
+    const history = sheet.getDataRange().getValues();
+
+    let latest = null;
+
+    for (let j = history.length - 1; j >= 3; j--) {
+      if (history[j][0]) {
+        latest = history[j];
+        break;
+      }
+    }
+
+    if (!latest) continue;
+
+    if (!latest[2]) {
+
+      const studentId = latest[0];
+      const daysOut = daysSince(latest[1]);
+
+      sendOverdueEmail(
+        email,
+        studentId,
+        cbNum,
+        daysOut
+      );
+    }
+  }
+}
+
+
 function stopScanner() {
   const modal = document.getElementById('scannerModal');
   if (html5Scanner) {
