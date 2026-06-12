@@ -282,6 +282,7 @@ const ACCESS_KEY = 'chromebook';
 let allReportRows = [];
 
 window.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   if (localStorage.getItem('cbLoggedIn')) {
     showApp(localStorage.getItem('cbLoggedIn'));
   }
@@ -659,6 +660,24 @@ function showMsg(el, text, type) {
   el.textContent = text;
   el.className = 'msg ' + type;
 }
+
+  // ── THEME TOGGLE ──────────────────────────────────────────
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  const isLight = document.body.classList.contains('light-mode');
+  localStorage.setItem('cbTheme', isLight ? 'light' : 'dark');
+  document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('cbTheme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    document.getElementById('themeToggle').textContent = '☀️';
+  }
+}
+  
 </script>
+  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
 </body>
 </html>
