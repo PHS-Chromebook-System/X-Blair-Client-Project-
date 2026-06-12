@@ -381,13 +381,35 @@ function daysSince(dateStr) {
   return Math.floor((today - d) / 86400000);
 }
 
-// ── CHECKOUT ──────────────────────────────────────────────
+  // ── CHECKOUT ──────────────────────────────────────────────
 async function checkout() {
   const cbNum = document.getElementById('coNum').value.trim();
   const stuId = document.getElementById('coStudent').value.trim();
   const notes = document.getElementById('coNotes').value.trim();
   const msg   = document.getElementById('coMsg');
   if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
+
+  showMsg(msg, 'Checking student records...', '');
+
+  // Check if this student already has a Chromebook checked out
+  try {
+    const checkRes  = await fetch(SCRIPT_URL + '?action=report');
+    const checkData = await checkRes.json();
+    const rows = checkData.rows || [];
+    const alreadyOut = rows.find(r => r.status === 'Out' && String(r.studentId) === String(stuId));
+
+    if (alreadyOut) {
+      showMsg(msg, '', '');
+      const proceed = await confirmDuplicateCheckout(stuId, alreadyOut.cbNum);
+      if (!proceed) {
+        showMsg(msg, 'Checkout cancelled.', 'error');
+        return;
+      }
+    }
+  } catch (e) {
+    // if the check itself fails, don't block checkout — just continue
+  }
+
   showMsg(msg, 'Saving...', '');
   try {
     const res  = await fetch(SCRIPT_URL, {
@@ -407,6 +429,40 @@ async function checkout() {
   } catch(e) {
     showMsg(msg, 'Connection error.', 'error');
   }
+}
+
+// ── DUPLICATE CHECKOUT CONFIRMATION ──────────────────────────────────
+function confirmDuplicateCheckout(stuId, existingCbNum) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.id = 'dupConfirmModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-box">
+          <h3 class="modal-title">⚠️ Student Already Has a Chromebook</h3>
+          <p class="modal-body">
+            Student <strong>${stuId}</strong> already has Chromebook
+            <strong>#${existingCbNum}</strong> checked out.
+            Are you sure you want to give this student another Chromebook?
+          </p>
+          <div class="modal-actions">
+            <button class="btn btn-danger" id="dupYesBtn">Yes, Continue</button>
+            <button class="btn btn-ghost" id="dupNoBtn">No, Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('dupYesBtn').onclick = () => {
+      modal.remove();
+      resolve(true);
+    };
+    document.getElementById('dupNoBtn').onclick = () => {
+      modal.remove();
+      resolve(false);
+    };
+  });
 }
 
 // ── CHECKIN ──────────────────────────────────────────────
