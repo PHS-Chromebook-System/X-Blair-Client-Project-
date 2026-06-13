@@ -230,6 +230,9 @@
       <div class="page-header">
         <h2 class="page-title">Currently Checked Out Chromebooks</h2>
       </div>
+      <div class="toolbar">
+        <button class="btn btn-ghost" onclick="printCheckedOut()">Print Report</button>
+      </div>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -645,6 +648,19 @@ function printReport() {
     <html><head><title>Chromebook Report</title>
     <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
     </head><body><h1>Poolesville Chromebook Report</h1>${reportContent}</body></html>
+  `);
+  pw.document.close();
+  pw.focus();
+  setTimeout(() => pw.print(), 500);
+}
+
+  function printCheckedOut() {
+  const content = document.getElementById('checkedout').innerHTML;
+  const pw = window.open('', '_blank');
+  pw.document.write(`
+    <html><head><title>Checked Out Chromebooks</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
+    </head><body><h1>Poolesville Checked Out Chromebooks</h1>${content}</body></html>
   `);
   pw.document.close();
   pw.focus();
