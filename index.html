@@ -231,8 +231,9 @@
         <h2 class="page-title">Currently Checked Out Chromebooks</h2>
       </div>
       <div class="toolbar">
+        <input id="checkedoutSearch" placeholder="Search by Chromebook #" oninput="filterCheckedOut()" class="search-input">
         <button class="btn btn-ghost" onclick="printCheckedOut()">Print Report</button>
-      </div>
+    </div>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -485,33 +486,52 @@ function filterReport() {
 }
 
 // ── CHECKED OUT ──────────────────────────────────────────────
+let allCheckedOutRows = [];
+
 async function loadCheckedOut() {
   const tbody = document.getElementById('checkedoutBody');
   if (!tbody) return;
+  const searchEl = document.getElementById('checkedoutSearch');
+  if (searchEl) searchEl.value = '';
   tbody.innerHTML = '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
   try {
     const res  = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
     const rows = (data.rows || []).filter(r => r.status === 'Out');
     rows.sort((a, b) => daysSince(b.checkoutDate) - daysSince(a.checkoutDate));
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="table-empty">✓ All Chromebooks are currently checked in.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
-        <td>${r.barcode || '—'}</td>
-        <td>${r.serial || '—'}</td>
-        <td>${r.studentId}</td>
-        <td>${r.checkoutDate}</td>
-        <td><span class="badge badge-out">${daysSince(r.checkoutDate)}</span></td>
-        <td>${r.notes || '—'}</td>
-      </tr>
-    `).join('');
+    allCheckedOutRows = rows;
+    renderCheckedOut(rows);
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
   }
+}
+
+function renderCheckedOut(rows) {
+  const tbody = document.getElementById('checkedoutBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">✓ All Chromebooks are currently checked in.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
+      <td>${r.barcode || '—'}</td>
+      <td>${r.serial || '—'}</td>
+      <td>${r.studentId}</td>
+      <td>${r.checkoutDate}</td>
+      <td><span class="badge badge-out">${daysSince(r.checkoutDate)}</span></td>
+      <td>${r.notes || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function filterCheckedOut() {
+  const q = document.getElementById('checkedoutSearch').value.toLowerCase();
+  if (!q) { renderCheckedOut(allCheckedOutRows); return; }
+  const filtered = allCheckedOutRows.filter(r =>
+    String(r.cbNum).toLowerCase().includes(q)
+  );
+  renderCheckedOut(filtered);
 }
 
 // ── HISTORY ──────────────────────────────────────────────
