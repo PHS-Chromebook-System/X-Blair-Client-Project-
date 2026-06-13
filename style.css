@@ -834,3 +834,85 @@ body.light-mode .topbar-mobile       { border-color: #e1e5f0; }
 body.light-mode .topbar-title        { color: #9c8154; }
 
 body.light-mode #themeToggle         { background: #ffffff; border-color: #e1e5f0; box-shadow: 0 2px 12px rgba(30,40,80,0.08); }
+
+/* ── TRANSITIONS & ANIMATIONS ─────────────────────────────── */
+
+/* Tab content fade-in */
+.tab.active {
+  animation: fadeSlideIn 0.25s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Smooth color/background transitions for theme toggle */
+body,
+.sidebar, .login-card, .form-card, .stat-card, .activity-list,
+.table-wrapper, .settings-card, .modal-box, th, td,
+.nav-item, input, .btn, #themeToggle, .topbar-mobile {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Stat card hover lift */
+.stat-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+/* Activity items slide in slightly on hover */
+.activity-item {
+  transition: background-color 0.15s ease;
+}
+.activity-item:hover {
+  background-color: rgba(171, 148, 95, 0.06);
+}
+
+/* Table row transitions already have hover; smooth it */
+tr td {
+  transition: background-color 0.15s ease;
+}
+
+/* Modal pop-in */
+.modal-box {
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-overlay {
+  animation: overlayFade 0.2s ease-out;
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Theme toggle button spin/scale on click */
+#themeToggle {
+  transition: transform 0.3s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+#themeToggle:active {
+  transform: scale(0.9) rotate(15deg);
+}
+
+/* Buttons press feedback */
+.btn {
+  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* Badge pop */
+.badge {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
