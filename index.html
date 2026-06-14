@@ -62,6 +62,9 @@
       <button class="nav-item" onclick="showTab('settings', this)">
         <span class="nav-icon">⚙</span> Settings
       </button>
+      <button class="nav-item" onclick="showTab('allchromebooks', this)">
+        <span class="nav-icon">▦</span> All Chromebooks
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -119,11 +122,6 @@
       <div class="section-label">Recent Activity</div>
       <div class="activity-list" id="activityList">
         <div class="activity-loading">Loading activity...</div>
-      </div>
-
-      <div class="section-label">All Chromebooks</div>
-      <div class="cb-grid" id="cbGrid">
-        <div class="activity-loading">Loading...</div>
       </div>
     </div>
 
@@ -281,6 +279,24 @@
       </div>
     </div>
 
+    <!-- ALL CHROMEBOOKS TAB -->
+    <div id="allchromebooks" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">All Chromebooks</h2>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>CB #</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="allCbBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -331,9 +347,10 @@ function showTab(name, btn) {
   document.getElementById(name).classList.add('active');
   if (btn) btn.classList.add('active');
 
-  if (name === 'dashboard')  loadDashboard();
-  if (name === 'report')     loadReport();
-  if (name === 'checkedout') loadCheckedOut();
+  if (name === 'dashboard')      loadDashboard();
+  if (name === 'report')         loadReport();
+  if (name === 'checkedout')     loadCheckedOut();
+  if (name === 'allchromebooks') loadAllChromebooks();
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────
@@ -377,23 +394,8 @@ async function loadDashboard() {
         </div>
       `).join('');
     }
-
-    // ── CHROMEBOOK STATUS GRID ──────────────────────────────
-    const grid = document.getElementById('cbGrid');
-    if (!rows.length) {
-      grid.innerHTML = '<div class="activity-empty">No Chromebooks found.</div>';
-    } else {
-      const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
-      grid.innerHTML = sorted.map(r => `
-        <a href="#" class="cb-tile ${r.status === 'Out' ? 'cb-tile-out' : 'cb-tile-in'}"
-           onclick="viewHistory('${r.cbNum}'); return false;">
-          #${r.cbNum}
-        </a>
-      `).join('');
-    }
   } catch(e) {
     document.getElementById('activityList').innerHTML = '<div class="activity-empty">Could not load data.</div>';
-    document.getElementById('cbGrid').innerHTML = '<div class="activity-empty">Could not load data.</div>';
   }
 }
 
@@ -553,6 +555,31 @@ function filterCheckedOut() {
     String(r.cbNum).toLowerCase().includes(q)
   );
   renderCheckedOut(filtered);
+}
+
+// ── ALL CHROMEBOOKS ──────────────────────────────────────────
+async function loadAllChromebooks() {
+  const tbody = document.getElementById('allCbBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="2" class="table-loading">Loading...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = data.rows || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="2" class="table-empty">No Chromebooks found.</td></tr>';
+      return;
+    }
+    const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
+    tbody.innerHTML = sorted.map(r => `
+      <tr>
+        <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
+        <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in-green'}">${r.status}</span></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="2" class="table-error">Could not load data.</td></tr>';
+  }
 }
 
 // ── HISTORY ──────────────────────────────────────────────
