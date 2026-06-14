@@ -1,914 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poolesville Chromebook Management Portal</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chromebook Portal</title>
+
 <script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body { font-family: Arial; margin:0; }
+.hidden { display:none; }
+.tab { display:none; padding:20px; }
+.tab.active { display:block; }
+.sidebar { width:220px; float:left; background:#111; color:#fff; height:100vh; padding:10px; }
+.main { margin-left:220px; padding:10px; }
+button { margin:5px; }
+.stat { display:inline-block; padding:10px; margin:5px; background:#eee; }
+</style>
 </head>
+
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="loginScreen" class="login-wrapper">
-  <div class="login-card">
-    <div class="login-header">
-      <div class="login-logo">📚</div>
-      <h1 class="login-title">Poolesville High School</h1>
-      <p class="login-sub">Chromebook Management Portal</p>
-      <p class="login-tagline">Asset Tracking &amp; Checkout System</p>
-    </div>
-    <div class="login-form">
-      <div class="field-group">
-        <label class="field-label">School Name</label>
-        <input id="username" placeholder="e.g. Poolesville High School" autocomplete="off">
-      </div>
-      <div class="field-group">
-        <label class="field-label">Access Key</label>
-        <input id="password" type="password" placeholder="Enter shared access key">
-      </div>
-      <button class="btn btn-primary btn-full" onclick="login()">Sign In</button>
-      <div id="loginMsg" class="msg"></div>
-    </div>
-  </div>
+<!-- LOGIN -->
+<div id="login">
+  <h2>Login</h2>
+  <input id="user" placeholder="School"/>
+  <input id="pass" type="password" placeholder="Key"/>
+  <button onclick="login()">Login</button>
+  <div id="msg"></div>
 </div>
 
-<!-- MAIN APP -->
-<div id="app" class="hidden app-layout">
+<!-- APP -->
+<div id="app" class="hidden">
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-      <span class="sidebar-logo">📚</span>
-      <span class="sidebar-title">PHS Portal</span>
-    </div>
+<div class="sidebar">
+  <button onclick="showTab('dash')">Dashboard</button>
+  <button onclick="showTab('report')">Report</button>
+  <button onclick="showTab('check')">Check In/Out</button>
+</div>
 
-    <nav class="sidebar-nav">
-      <button class="nav-item active" onclick="showTab('dashboard', this)">
-        <span class="nav-icon">⊞</span> Dashboard
-      </button>
-      <button class="nav-item" data-tab="checkpage" onclick="showTab('checkpage', this)">
-        <span class="nav-icon">⇅</span> Check Out / In
-      </button>
-      <button class="nav-item" onclick="showTab('report', this)">
-        <span class="nav-icon">☰</span> Report
-      </button>
-      <button class="nav-item" onclick="showTab('checkedout', this)">
-        <span class="nav-icon">◉</span> Checked Out
-      </button>
-      <button class="nav-item" onclick="showTab('history', this)" id="historyNavBtn" style="display:none;">
-        <span class="nav-icon">↺</span> History
-      </button>
-      <button class="nav-item" onclick="showTab('settings', this)">
-        <span class="nav-icon">⚙</span> Settings
-      </button>
-    </nav>
+<div class="main">
 
-    <!-- ALL CHROMEBOOKS STATUS LIST -->
-    <div class="sidebar-cb-section">
-      <div class="sidebar-cb-label">All Chromebooks</div>
-      <div class="sidebar-cb-grid" id="sidebarCbGrid">
-        <div class="sidebar-cb-loading">Loading...</div>
-      </div>
-    </div>
+<!-- DASH -->
+<div id="dash" class="tab active">
+  <h2>Dashboard</h2>
 
-    <div class="sidebar-footer">
-      <div class="signed-in-label">Signed in as</div>
-      <div class="signed-in-name" id="sidebarUser">IT Staff</div>
-      <button class="btn btn-logout" onclick="logout()">Logout</button>
-    </div>
-  </aside>
+  <div class="stat">Total: <span id="t">-</span></div>
+  <div class="stat">In: <span id="i">-</span></div>
+  <div class="stat">Out: <span id="o">-</span></div>
+  <div class="stat">Overdue: <span id="d">-</span></div>
 
-  <!-- MAIN CONTENT -->
-  <main class="main-content">
+  <h3>Recent</h3>
+  <div id="recent"></div>
+</div>
 
-    <!-- TOP BAR (mobile) -->
-    <div class="topbar-mobile">
-      <span class="topbar-title">Poolesville Chromebook Portal</span>
-      <button class="btn btn-ghost" onclick="logout()">Logout</button>
-    </div>
+<!-- REPORT -->
+<div id="report" class="tab">
+  <h2>Report</h2>
+  <button onclick="loadReport()">Refresh</button>
+  <div id="reportBox">Loading...</div>
+</div>
 
-    <!-- DASHBOARD TAB -->
-    <div id="dashboard" class="tab active">
-      <div class="page-header">
-        <h2 class="page-title">Dashboard</h2>
-        <p class="page-subtitle">Poolesville Chromebook Management Portal</p>
-      </div>
+<!-- CHECK -->
+<div id="check" class="tab">
+  <h2>Checkout / Checkin</h2>
 
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="statTotal">—</div>
-          <div class="stat-label">Total</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value stat-in" id="statIn">—</div>
-          <div class="stat-label">In</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value stat-out" id="statOut">—</div>
-          <div class="stat-label">Out</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value stat-overdue" id="statOverdue">—</div>
-          <div class="stat-label">Overdue</div>
-        </div>
-      </div>
+  <input id="cb" placeholder="Chromebook #"/>
+  <input id="st" placeholder="Student ID"/>
+  <button onclick="checkout()">Checkout</button>
 
-      <div class="section-label">Quick Actions</div>
-      <div class="quick-actions">
-        <button class="btn btn-primary btn-action" onclick="showTab('checkpage', document.querySelector('[data-tab=checkpage]'))">
-          ↑ Check Out Chromebook
-        </button>
-        <button class="btn btn-secondary btn-action" onclick="showTab('checkpage', document.querySelector('[data-tab=checkpage]'))">
-          ↓ Check In Chromebook
-        </button>
-      </div>
+  <br><br>
 
-      <div class="section-label">Recent Activity</div>
-      <div class="activity-list" id="activityList">
-        <div class="activity-loading">Loading activity...</div>
-      </div>
-    </div>
+  <input id="cb2" placeholder="Chromebook #"/>
+  <button onclick="checkin()">Checkin</button>
 
-    <!-- COMBINED CHECK OUT / CHECK IN TAB -->
-    <div id="checkpage" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">Check Out / Check In</h2>
-      </div>
-      <div class="check-split">
+  <div id="m"></div>
+</div>
 
-        <!-- CHECK OUT -->
-        <div class="form-card">
-          <div class="form-card-heading">
-            <span class="form-card-icon form-card-icon--out">↑</span>
-            <span class="form-card-label">Check Out</span>
-          </div>
-          <div class="field-group">
-            <label class="field-label" for="coNum">Chromebook Barcode</label>
-            <input id="coNum" placeholder="Scan or type barcode / number">
-          </div>
-          <button class="btn btn-scan" onclick="scanCheckoutBarcode()">Scan Chromebook</button>
-
-          <div class="field-group">
-            <label class="field-label" for="coStudent">Student ID</label>
-            <input id="coStudent" placeholder="Enter student ID">
-          </div>
-          <button class="btn btn-scan" onclick="scanStudentID()">Scan Student ID</button>
-
-          <div class="field-group">
-            <label class="field-label" for="coNotes">Notes</label>
-            <input id="coNotes" placeholder="Optional notes (e.g. broken key)">
-          </div>
-
-          <button class="btn btn-primary btn-full btn-lg" onclick="checkout()">CHECK OUT</button>
-          <div id="coMsg" class="msg"></div>
-        </div>
-
-        <!-- CHECK IN -->
-        <div class="form-card">
-          <div class="form-card-heading">
-            <span class="form-card-icon form-card-icon--in">↓</span>
-            <span class="form-card-label">Check In</span>
-          </div>
-          <div class="field-group">
-            <label class="field-label" for="ciNum">Chromebook Barcode</label>
-            <input id="ciNum" placeholder="Scan or type barcode / number">
-          </div>
-          <button class="btn btn-scan" onclick="scanCheckinBarcode()">Scan Chromebook</button>
-
-          <button class="btn btn-primary btn-full btn-lg" style="margin-top: 8px;" onclick="checkin()">CHECK IN</button>
-          <div id="ciMsg" class="msg"></div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- REPORT TAB -->
-    <div id="report" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">Chromebook Inventory Report</h2>
-      </div>
-      <div class="toolbar">
-        <input id="reportSearch" placeholder="Search by Chromebook #" oninput="filterReport()" class="search-input">
-        <button class="btn btn-ghost" onclick="printReport()">🖨 Print Report</button>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>CB #</th>
-              <th>Barcode</th>
-              <th>Serial #</th>
-              <th>Student ID</th>
-              <th>Checked Out</th>
-              <th>Checked In</th>
-              <th>Status</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody id="reportBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- HISTORY TAB -->
-    <div id="history" class="tab">
-      <div class="page-header">
-        <button class="btn btn-ghost btn-back" onclick="showTab('report', document.querySelector('.nav-item[onclick*=report]'))">← Back to Report</button>
-        <h2 class="page-title" id="historyTitle">Chromebook History</h2>
-        <div id="historyMeta" class="history-meta"></div>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Student ID</th>
-              <th>Date Signed Out</th>
-              <th>Date Returned</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- CHECKED OUT TAB -->
-    <div id="checkedout" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">Currently Checked Out Chromebooks</h2>
-      </div>
-      <div class="toolbar">
-        <input id="checkedoutSearch" placeholder="Search by Chromebook #" oninput="filterCheckedOut()" class="search-input">
-        <button class="btn btn-ghost" onclick="printCheckedOut()">🖨 Print Report</button>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>CB #</th>
-              <th>Barcode</th>
-              <th>Serial #</th>
-              <th>Student ID</th>
-              <th>Date Signed Out</th>
-              <th>Days Out</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody id="checkedoutBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- SETTINGS TAB -->
-    <div id="settings" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">Settings</h2>
-      </div>
-      <div class="form-card settings-card">
-        <div class="settings-row">
-          <div class="settings-desc">
-            <div class="settings-label">Reset Chromebook History</div>
-            <div class="settings-hint">Permanently clears the checkout history of every Chromebook. This cannot be undone.</div>
-          </div>
-          <button class="btn btn-danger" onclick="confirmResetAll()">Reset Chromebook History</button>
-        </div>
-        <div class="settings-divider"></div>
-        <div class="settings-row">
-          <div class="settings-desc">
-            <div class="settings-label">Export Report</div>
-            <div class="settings-hint">Download the full inventory report as a printable page.</div>
-          </div>
-          <button class="btn btn-ghost" onclick="printReport()">Export Report</button>
-        </div>
-      </div>
-    </div>
-
-  </main>
+</div>
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4JH-l5_XafTDuaMsL1j7v4OFUJN5wHGHb8QVkS1v5Nk2le1nD3FspqAJlg3hojvip/exec';
-const ACCESS_KEY = 'chromebook';
+const URL = "YOUR_SCRIPT_URL";
 
-let allReportRows = [];
-let cachedReport = null;
+let cache = {
+  summary: null,
+  report: null,
+  ts: 0
+};
 
+const TTL = 15000;
 
-window.addEventListener('DOMContentLoaded', async () => {
-  initTheme();
-
-  if (localStorage.getItem('cbLoggedIn')) {
-    await preloadData();
-    showApp(localStorage.getItem('cbLoggedIn'));
-  }
-});
-
-async function showApp(user) {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  document.getElementById('sidebarUser').textContent = user;
-
-  if (!cachedReport) {
-    await preloadData();
-  }
-
-  loadSidebarCbListFromCache();
-  loadDashboard();
-}
-
+// ---------------- LOGIN ----------------
 function login() {
-  const user = document.getElementById('username').value.trim();
-  const pass = document.getElementById('password').value.trim();
-  const msg  = document.getElementById('loginMsg');
-  if (!user) { showMsg(msg, 'Please enter your school name.', 'error'); return; }
-  if (!pass) { showMsg(msg, 'Please enter the access key.', 'error'); return; }
-  if (pass !== ACCESS_KEY) { showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return; }
-  localStorage.setItem('cbLoggedIn', user);
-  showApp(user);
-}
+  const u = user.value, p = pass.value;
+  if (p !== "chromebook") return msg.innerText = "Wrong key";
 
-function logout() {
-  localStorage.removeItem('cbLoggedIn');
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
-}
+  localStorage.setItem("user", u);
+  login.style.display = "none";
+  app.classList.remove("hidden");
 
-function showTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  document.getElementById(name).classList.add('active');
-  if (btn) btn.classList.add('active');
-
-  if (name === 'dashboard')  loadDashboard();
-  if (name === 'report')     loadReport();
-  if (name === 'checkedout') loadCheckedOut();
-}
-
-// ── SIDEBAR CHROMEBOOK STATUS LIST ──────────────────────────
-async function loadSidebarCbList() {
-  const grid = document.getElementById('sidebarCbGrid');
-  if (!grid) return;
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-    const rows = data.rows || [];
-    if (!rows.length) {
-      grid.innerHTML = '<div class="sidebar-cb-empty">None</div>';
-      return;
-    }
-    const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
-    grid.innerHTML = sorted.map(r => `
-      <a href="#" class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
-         onclick="viewHistory('${r.cbNum}'); return false;" title="#${r.cbNum} — ${r.status}">${r.cbNum}</a>
-    `).join('');
-  } catch(e) {
-    grid.innerHTML = '<div class="sidebar-cb-empty">Error</div>';
-  }
-}
-
-// ── DASHBOARD ──────────────────────────────────────────────
-function loadDashboard() {
-  const rows = cachedReport;
-  if (!rows || rows.length === 0) return;
-
-  allReportRows = rows;
-
-  const total = rows.length;
-
-  let outCount = 0;
-  let overdueCount = 0;
-
-  const activity = [];
-
-  for (let i = 0; i < total; i++) {
-    const r = rows[i];
-
-    const status = r.status;
-    const cb = r.cbNum;
-    const student = r.studentId;
-    const outDate = r.checkoutDate;
-    const inDate = r.checkinDate;
-
-    if (status === 'Out') {
-      outCount++;
-      if (daysSince(outDate) > 0) overdueCount++;
-    }
-
-    if (outDate && outDate !== '—') {
-      activity.push({
-        ts: Date.parse(outDate),
-        text: '#' + cb + ' checked out to ' + student,
-        type: 'out',
-        date: outDate
-      });
-    }
-
-    if (inDate && inDate !== '—') {
-      activity.push({
-        ts: Date.parse(inDate),
-        text: '#' + cb + ' returned',
-        type: 'in',
-        date: inDate
-      });
-    }
-  }
-
-  const inCount = total - outCount;
-
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statIn').textContent = inCount;
-  document.getElementById('statOut').textContent = outCount;
-  document.getElementById('statOverdue').textContent = overdueCount;
-
-  activity.sort((a, b) => b.ts - a.ts);
-
-  const list = document.getElementById('activityList');
-
-  if (activity.length === 0) {
-    list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
-    return;
-  }
-
-  const limit = activity.length < 10 ? activity.length : 10;
-
-  let html = '';
-  for (let i = 0; i < limit; i++) {
-    const a = activity[i];
-    html += `
-      <div class="activity-item">
-        <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
-        <span class="activity-text">${a.text}</span>
-        <span class="activity-date">${a.date}</span>
-      </div>
-    `;
-  }
-
-  list.innerHTML = html;
-}
-// ── CHECKOUT ──────────────────────────────────────────────
-async function checkout() {
-  const cbNum = document.getElementById('coNum').value.trim();
-  const stuId = document.getElementById('coStudent').value.trim();
-  const notes = document.getElementById('coNotes').value.trim();
-  const msg   = document.getElementById('coMsg');
-  if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
-
-  // Check if this student already has a Chromebook checked out
-  const alreadyCheckedOut = allReportRows.find(
-    r => String(r.studentId).trim() === String(stuId).trim() && r.status === 'Out'
-  );
-
-  if (alreadyCheckedOut) {
-    // Show warning modal; on confirm, proceed with checkout
-    showDuplicateStudentModal(stuId, alreadyCheckedOut.cbNum, () => {
-      performCheckout(cbNum, stuId, notes, msg);
-    });
-    return;
-  }
-
-  performCheckout(cbNum, stuId, notes, msg);
-}
-
- async function preloadData() {
-  try {
-    const res = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-
-    cachedReport = data.rows || [];
-    allReportRows = cachedReport;
-
-  } catch (err) {
-    console.error('Preload failed:', err);
-  }
-}
-function showDuplicateStudentModal(stuId, existingCbNum, onConfirm) {
-  // Remove any existing modal
-  const existing = document.getElementById('duplicateStudentModal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'duplicateStudentModal';
-  modal.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-box">
-        <h3 class="modal-title">⚠️ Student Already Has a Chromebook</h3>
-        <p class="modal-body">
-          Student <strong>${stuId}</strong> already has Chromebook
-          <strong>#${existingCbNum}</strong> checked out.<br><br>
-          Do you still want to check out another Chromebook to this student?
-        </p>
-        <div class="modal-actions">
-          <button class="btn btn-danger" id="duplicateYesBtn">Yes, Check Out Anyway</button>
-          <button class="btn btn-ghost" id="duplicateNoBtn">No, Cancel</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  document.getElementById('duplicateYesBtn').addEventListener('click', () => {
-    modal.remove();
-    onConfirm();
-  });
-
-  document.getElementById('duplicateNoBtn').addEventListener('click', () => {
-    modal.remove();
-    const msg = document.getElementById('coMsg');
-    showMsg(msg, 'Checkout cancelled.', 'error');
-  });
-}
-
-async function performCheckout(cbNum, stuId, notes, msg) {
-  showMsg(msg, 'Saving...', '');
-  try {
-    const res  = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), notes })
-    });
-    const data = await res.json();
-   if (data.success) {
-
-  await preloadData();
-
-  showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
-
-  document.getElementById('coNum').value = '';
-  document.getElementById('coStudent').value = '';
-  document.getElementById('coNotes').value = '';
-
-  document.getElementById('coNum').focus();
-
-  loadSidebarCbListFromCache();
   loadDashboard();
-} else {
-      showMsg(msg, data.message || 'Error.', 'error');
-    }
-  } catch(e) {
-    showMsg(msg, 'Connection error.', 'error');
-  }
 }
 
-// ── CHECKIN ──────────────────────────────────────────────
-async function checkin() {
-  const cbNum = document.getElementById('ciNum').value.trim();
-  const msg   = document.getElementById('ciMsg');
-  if (!cbNum) { showMsg(msg, 'Enter Chromebook #.', 'error'); return; }
-  showMsg(msg, 'Saving...', '');
-  try {
-    const res  = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today() })
-    });
-    const data = await res.json();
-    if (data.success) {
+// ---------------- TAB ----------------
+function showTab(t) {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.getElementById(t).classList.add("active");
 
-  await preloadData();
-
-  showMsg(
-    msg,
-    `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`,
-    'success'
-  );
-
-  document.getElementById('ciNum').value = '';
-  document.getElementById('ciNum').focus();
-
-  loadSidebarCbListFromCache();
-  loadDashboard();
-}else {
-      showMsg(msg, data.message || 'Error.', 'error');
-    }
-  } catch(e) {
-    showMsg(msg, 'Connection error.', 'error');
-  }
+  if (t === "dash") loadDashboard();
+  if (t === "report") loadReport();
 }
 
-// ── REPORT ──────────────────────────────────────────────
+// ---------------- CACHE FETCH ----------------
+async function getSummary() {
+  if (cache.summary && Date.now() - cache.ts < TTL) return cache.summary;
+
+  const r = await fetch(URL + "?action=summary");
+  cache.summary = await r.json();
+  cache.ts = Date.now();
+  return cache.summary;
+}
+
+async function getReport(force=false) {
+  if (!force && cache.report && Date.now() - cache.ts < TTL) return cache.report;
+
+  const r = await fetch(URL + "?action=report");
+  cache.report = await r.json();
+  cache.ts = Date.now();
+  return cache.report;
+}
+
+// ---------------- DASHBOARD ----------------
+async function loadDashboard() {
+  const d = await getSummary();
+
+  t.innerText = d.total;
+  i.innerText = d.in;
+  o.innerText = d.out;
+  this.d.innerText = d.overdue;
+
+  recent.innerHTML = d.recent.map(x =>
+    `<div>${x.text}</div>`
+  ).join("");
+}
+
+// ---------------- REPORT ----------------
 async function loadReport() {
-  const tbody = document.getElementById('reportBody');
-  const searchEl = document.getElementById('reportSearch');
+  const d = await getReport();
 
-  if (searchEl) searchEl.value = '';
-
-  // 🔥 FAST PATH: use cache instantly
-  if (cachedReport) {
-    allReportRows = cachedReport;
-    renderReport(cachedReport);
-    return;
-  }
-
-  // fallback (only if cache empty)
-  tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
-
-  try {
-    const res = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-
-    cachedReport = data.rows || [];
-    allReportRows = cachedReport;
-
-    renderReport(cachedReport);
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="8">Error loading data</td></tr>';
-  }
+  reportBox.innerHTML =
+    "<table border=1><tr><th>CB</th><th>Student</th><th>Status</th></tr>" +
+    d.rows.map(r =>
+      `<tr><td>${r.cbNum}</td><td>${r.studentId}</td><td>${r.status}</td></tr>`
+    ).join("") +
+    "</table>";
 }
 
-function renderReport(rows) {
-  const tbody = document.getElementById('reportBody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No records yet.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
-      <td>${r.barcode || '—'}</td>
-      <td>${r.serial || '—'}</td>
-      <td>${r.studentId}</td>
-      <td>${r.checkoutDate}</td>
-      <td>${r.checkinDate}</td>
-      <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in-green'}">${r.status}</span></td>
-      <td>${r.notes || '—'}</td>
-    </tr>
-  `).join('');
-}
+// ---------------- CHECKOUT ----------------
+async function checkout() {
+  m.innerText = "Saving...";
 
-function filterReport() {
-  const q = document.getElementById('reportSearch').value.toLowerCase();
-  if (!allReportRows.length) { loadReport(); return; }
-  if (!q) { renderReport(allReportRows); return; }
-  const filtered = allReportRows.filter(r =>
-    String(r.cbNum).toLowerCase().includes(q)
-  );
-  renderReport(filtered);
-}
-function updateDashboardFromCache() {
+  await fetch(URL, {
+    method:"POST",
+    body: JSON.stringify({
+      action:"checkout",
+      cbNum: cb.value,
+      studentId: st.value
+    })
+  });
+
+  cache.summary = null;
+  cache.report = null;
+
+  m.innerText = "Done";
   loadDashboard();
 }
 
-function loadSidebarCbListFromCache() {
-  const grid = document.getElementById('sidebarCbGrid');
-  const rows = cachedReport || [];
+// ---------------- CHECKIN ----------------
+async function checkin() {
+  m.innerText = "Saving...";
 
-  if (!rows.length) return;
+  await fetch(URL, {
+    method:"POST",
+    body: JSON.stringify({
+      action:"checkin",
+      cbNum: cb2.value
+    })
+  });
 
-  const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
+  cache.summary = null;
+  cache.report = null;
 
-  grid.innerHTML = sorted.map(r => `
-    <a href="#"
-       class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
-       onclick="viewHistory('${r.cbNum}'); return false;"
-       title="#${r.cbNum} — ${r.status}">
-      ${r.cbNum}
-    </a>
-  `).join('');
-}
-
-// ── CHECKED OUT ──────────────────────────────────────────────
-let allCheckedOutRows = [];
-
-async function loadCheckedOut() {
-  const tbody = document.getElementById('checkedoutBody');
-  if (!tbody) return;
-
-  const searchEl = document.getElementById('checkedoutSearch');
-  if (searchEl) searchEl.value = '';
-
-  tbody.innerHTML =
-    '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
-
-  try {
-
-    if (!cachedReport) {
-      const res = await fetch(SCRIPT_URL + '?action=report');
-      const data = await res.json();
-
-      cachedReport = data.rows || [];
-      allReportRows = cachedReport;
-    }
-
-    const rows = cachedReport
-      .filter(r => r.status === 'Out')
-      .sort((a, b) =>
-        daysSince(b.checkoutDate) - daysSince(a.checkoutDate)
-      );
-
-    allCheckedOutRows = rows;
-    renderCheckedOut(rows);
-
-  } catch (e) {
-    tbody.innerHTML =
-      '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
-  }
-}
-function renderCheckedOut(rows) {
-  const tbody = document.getElementById('checkedoutBody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">✓ All Chromebooks are currently checked in.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
-      <td>${r.barcode || '—'}</td>
-      <td>${r.serial || '—'}</td>
-      <td>${r.studentId}</td>
-      <td>${r.checkoutDate}</td>
-      <td><span class="badge badge-out">${daysSince(r.checkoutDate)}</span></td>
-      <td>${r.notes || '—'}</td>
-    </tr>
-  `).join('');
-}
-
-function filterCheckedOut() {
-  const q = document.getElementById('checkedoutSearch').value.toLowerCase();
-  if (!q) { renderCheckedOut(allCheckedOutRows); return; }
-  const filtered = allCheckedOutRows.filter(r =>
-    String(r.cbNum).toLowerCase().includes(q)
-  );
-  renderCheckedOut(filtered);
-}
-
-// ── HISTORY ──────────────────────────────────────────────
-async function viewHistory(cbNum) {
-  const histBtn = document.getElementById('historyNavBtn');
-  histBtn.style.display = '';
-
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  document.getElementById('history').classList.add('active');
-  histBtn.classList.add('active');
-
-  document.getElementById('historyTitle').textContent = `Chromebook #${cbNum}`;
-
-  const row = allReportRows.find(r => String(r.cbNum) === String(cbNum));
-  const meta = document.getElementById('historyMeta');
-  if (row) {
-    const statusClass = row.status === 'Out' ? 'badge-out' : 'badge-in';
-    const statusIcon  = row.status === 'Out' ? '🔴' : '🟢';
-    meta.innerHTML = `
-      <span>Barcode: <strong>${row.barcode || '—'}</strong></span>
-      <span>Serial #: <strong>${row.serial || '—'}</strong></span>
-      <span>Current Status: <span class="badge ${statusClass}">${statusIcon} ${row.status}</span></span>
-    `;
-  } else {
-    meta.innerHTML = '';
-  }
-
-  const tbody = document.getElementById('historyBody');
-  tbody.innerHTML = '<tr><td colspan="4" class="table-loading">Loading...</td></tr>';
-
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=history&cbNum=' + encodeURIComponent(cbNum));
-    const data = await res.json();
-    if (!data.rows || !data.rows.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No history found.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.rows.map(r => `
-      <tr>
-        <td>${r.studentId}</td>
-        <td>${r.checkoutDate}</td>
-        <td>${r.checkinDate}</td>
-        <td>${r.notes || '—'}</td>
-      </tr>
-    `).join('');
-  } catch(err) {
-    tbody.innerHTML = '<tr><td colspan="4" class="table-error">Could not load history.</td></tr>';
-  }
-}
-
-// ── SETTINGS / RESET ──────────────────────────────────────────────
-function confirmResetAll() {
-  const modal = document.createElement('div');
-  modal.id = 'confirmModal';
-  modal.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-box">
-        <h3 class="modal-title">⚠️ Reset All History</h3>
-        <p class="modal-body">Are you sure you want to clear the history of <strong>every Chromebook</strong>? This cannot be undone.</p>
-        <div class="modal-actions">
-          <button class="btn btn-danger" onclick="resetAllHistory()">Yes, Reset All</button>
-          <button class="btn btn-ghost" onclick="document.getElementById('confirmModal').remove()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
-
-async function resetAllHistory() {
-  document.getElementById('confirmModal').remove();
-  const tbody = document.getElementById('reportBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Resetting all histories...</td></tr>';
-  try {
-    const res  = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAllHistory' }) });
-    const data = await res.json();
-    if (data.success) { loadReport(); loadSidebarCbListFromCache(); }
-    else if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="table-error">Error: ${data.message}</td></tr>`;
-  } catch(e) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
-  }
-}
-
-// ── SCANNER ──────────────────────────────────────────────
-let html5Scanner = null;
-let currentTarget = null;
-
-function scanCheckoutBarcode() { startCameraScan('coNum'); }
-function scanCheckinBarcode()  { startCameraScan('ciNum'); }
-function scanStudentID()       { startCameraScan('coStudent'); }
-
-function startCameraScan(targetField) {
-  currentTarget = targetField;
-  const modal = document.createElement('div');
-  modal.id = 'scannerModal';
-  modal.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-box">
-        <h3 class="modal-title">Scan Barcode</h3>
-        <div id="reader"></div>
-        <button class="btn btn-danger btn-full" style="margin-top:15px;" onclick="stopScanner()">Cancel — Type Instead</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  html5Scanner = new Html5Qrcode("reader");
-  html5Scanner.start(
-    { facingMode: "environment" },
-    { fps: 15, qrbox: { width: 350, height: 150 } },
-    (decodedText) => {
-      document.getElementById(currentTarget).value = decodedText.trim();
-      stopScanner();
-    },
-    () => {}
-  );
-}
-
-function stopScanner() {
-  const modal = document.getElementById('scannerModal');
-  if (html5Scanner) {
-    try {
-      html5Scanner.stop().then(() => { html5Scanner.clear(); html5Scanner = null; if (modal) modal.remove(); })
-        .catch(() => { if (modal) modal.remove(); html5Scanner = null; });
-    } catch { if (modal) modal.remove(); html5Scanner = null; }
-  } else { if (modal) modal.remove(); }
-}
-
-// ── PRINT ──────────────────────────────────────────────
-function printReport() {
-  const reportContent = document.getElementById('report').innerHTML;
-  const pw = window.open('', '_blank');
-  pw.document.write(`
-    <html><head><title>Chromebook Report</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
-    </head><body><h1>Poolesville Chromebook Report</h1>${reportContent}</body></html>
-  `);
-  pw.document.close();
-  pw.focus();
-  setTimeout(() => pw.print(), 500);
-}
-
-function printCheckedOut() {
-  const content = document.getElementById('checkedout').innerHTML;
-  const pw = window.open('', '_blank');
-  pw.document.write(`
-    <html><head><title>Checked Out Chromebooks</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
-    </head><body><h1>Poolesville Checked Out Chromebooks</h1>${content}</body></html>
-  `);
-  pw.document.close();
-  pw.focus();
-  setTimeout(() => pw.print(), 500);
-}
-
-// ── UTILS ──────────────────────────────────────────────
-function today() {
-  return new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
-}
-
-function showMsg(el, text, type) {
-  el.textContent = text;
-  el.className = 'msg ' + type;
-}
-
-// ── THEME TOGGLE ──────────────────────────────────────────
-function toggleTheme() {
-  document.body.classList.toggle('light-mode');
-  const isLight = document.body.classList.contains('light-mode');
-  localStorage.setItem('cbTheme', isLight ? 'light' : 'dark');
-  document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
-}
-
-function initTheme() {
-  const saved = localStorage.getItem('cbTheme');
-  if (saved === 'light') {
-    document.body.classList.add('light-mode');
-    document.getElementById('themeToggle').textContent = '☀️';
-  }
+  m.innerText = "Done";
+  loadDashboard();
 }
 </script>
-  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
+
 </body>
 </html>
