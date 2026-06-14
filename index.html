@@ -425,6 +425,61 @@ async function checkout() {
   const notes = document.getElementById('coNotes').value.trim();
   const msg   = document.getElementById('coMsg');
   if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
+
+  // Check if this student already has a Chromebook checked out
+  const alreadyCheckedOut = allReportRows.find(
+    r => String(r.studentId).trim() === String(stuId).trim() && r.status === 'Out'
+  );
+
+  if (alreadyCheckedOut) {
+    // Show warning modal; on confirm, proceed with checkout
+    showDuplicateStudentModal(stuId, alreadyCheckedOut.cbNum, () => {
+      performCheckout(cbNum, stuId, notes, msg);
+    });
+    return;
+  }
+
+  performCheckout(cbNum, stuId, notes, msg);
+}
+
+function showDuplicateStudentModal(stuId, existingCbNum, onConfirm) {
+  // Remove any existing modal
+  const existing = document.getElementById('duplicateStudentModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'duplicateStudentModal';
+  modal.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">⚠️ Student Already Has a Chromebook</h3>
+        <p class="modal-body">
+          Student <strong>${stuId}</strong> already has Chromebook
+          <strong>#${existingCbNum}</strong> checked out.<br><br>
+          Do you still want to check out another Chromebook to this student?
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-danger" id="duplicateYesBtn">Yes, Check Out Anyway</button>
+          <button class="btn btn-ghost" id="duplicateNoBtn">No, Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('duplicateYesBtn').addEventListener('click', () => {
+    modal.remove();
+    onConfirm();
+  });
+
+  document.getElementById('duplicateNoBtn').addEventListener('click', () => {
+    modal.remove();
+    const msg = document.getElementById('coMsg');
+    showMsg(msg, 'Checkout cancelled.', 'error');
+  });
+}
+
+async function performCheckout(cbNum, stuId, notes, msg) {
   showMsg(msg, 'Saving...', '');
   try {
     const res  = await fetch(SCRIPT_URL, {
@@ -439,6 +494,7 @@ async function checkout() {
       document.getElementById('coNotes').value = '';
       document.getElementById('coNum').focus();
       loadSidebarCbList();
+      loadDashboard(); // Refresh allReportRows so duplicate check stays current
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
