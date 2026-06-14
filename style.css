@@ -20,9 +20,9 @@ body::before {
   pointer-events: none;
   background:
     /* bottom-left glow */
-    radial-gradient(ellipse 140% 80% at -10% 110%, rgba(171,148,95,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 140% 80% at -10% 110%, rgba(171,148,95,0.18) 0%, transparent 55%),
     /* top-right glow */
-    radial-gradient(ellipse 120% 70% at 110% -10%, rgba(171,148,95,0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 120% 70% at 110% -10%, rgba(171,148,95,0.14) 0%, transparent 55%),
     /* deep black base */
     #050507;
 }
@@ -40,38 +40,53 @@ body::after {
       circle at -8% 118%,
       transparent 0px,
       transparent 5px,
-      rgba(212,184,122,0.40) 5px,
-      rgba(212,184,122,0.40) 7px
+      rgba(171,148,95,0.14) 5px,
+      rgba(171,148,95,0.14) 6px
     ),
     repeating-radial-gradient(
       circle at -8% 118%,
       transparent 0px,
-      transparent 16px,
-      rgba(212,184,122,0.22) 16px,
-      rgba(212,184,122,0.22) 18px
+      transparent 13px,
+      rgba(171,148,95,0.07) 13px,
+      rgba(171,148,95,0.07) 14px
     ),
     /* top-right thin ring cluster */
     repeating-radial-gradient(
       circle at 110% -10%,
       transparent 0px,
-      transparent 10px,
-      rgba(212,184,122,0.24) 10px,
-      rgba(212,184,122,0.24) 12px
+      transparent 9px,
+      rgba(171,148,95,0.08) 9px,
+      rgba(171,148,95,0.08) 10px
     ),
-    /* single outer arc, top-right */
+    /* single faint outer arc, top-right */
     repeating-radial-gradient(
       circle at 115% -15%,
       transparent 0px,
       transparent 140px,
-      rgba(212,184,122,0.28) 140px,
-      rgba(212,184,122,0.28) 142px
+      rgba(171,148,95,0.10) 140px,
+      rgba(171,148,95,0.10) 141px
     );
+  mask-image:
+    radial-gradient(ellipse 80% 75% at -8% 112%, black 0%, transparent 65%),
+    radial-gradient(ellipse 60% 55% at 108% -8%, black 0%, transparent 60%);
+  mask-composite: add;
+  -webkit-mask-image:
+    radial-gradient(ellipse 80% 75% at -8% 112%, black 0%, transparent 65%),
+    radial-gradient(ellipse 60% 55% at 108% -8%, black 0%, transparent 60%);
+  -webkit-mask-composite: source-over;
   animation: waveShift 16s ease-in-out infinite alternate;
 }
 
 @keyframes waveShift {
   0%   { background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px; }
   100% { background-position: 25px 25px, 15px 15px, 10px 10px, 6px 6px; }
+}
+
+/* Ensure all content sits above the background layers */
+.login-wrapper,
+.app-layout {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── LOGIN ───────────────────────────────────────────────── */
