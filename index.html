@@ -288,19 +288,26 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziHdx63ZMyF5rT914wq9cZ1hptwsPaQts9xmB7-bB2SMimtZcVC0z84em_lFneAWhN/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/.../exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
 let cachedReport = null;
 
+preloadData(); // start loading data immediately
+
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
+
+  preloadData(); // start fetching immediately
+
   if (localStorage.getItem('cbLoggedIn')) {
     showApp(localStorage.getItem('cbLoggedIn'));
   }
+
   document.querySelectorAll('.nav-item').forEach(btn => {
-    const match = btn.getAttribute('onclick') && btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
+    const match = btn.getAttribute('onclick') &&
+      btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
     if (match) btn.setAttribute('data-tab', match[1]);
   });
 });
@@ -310,7 +317,6 @@ function showApp(user) {
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sidebarUser').textContent = user;
 
-  preloadData();
   loadDashboard();
 }
 
