@@ -312,11 +312,12 @@ input::placeholder { color: #4a5068; }
   font-weight: 700;
   padding: 10px 18px;
   cursor: pointer;
-  transition: opacity 0.2s, background 0.2s;
+  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
   white-space: nowrap;
 }
 
 .btn:hover { opacity: 0.85; }
+.btn:active { transform: scale(0.97); }
 
 .btn-primary {
   background: #ab945f;
@@ -407,6 +408,12 @@ input::placeholder { color: #4a5068; }
   border-radius: 12px;
   padding: 20px 16px;
   text-align: center;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
 }
 
 .stat-value {
@@ -452,6 +459,7 @@ input::placeholder { color: #4a5068; }
   border: 1px solid #2a2f3d;
   border-radius: 12px;
   overflow: hidden;
+  margin-bottom: 32px;
 }
 
 .activity-item {
@@ -460,9 +468,14 @@ input::placeholder { color: #4a5068; }
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid #1c2029;
+  transition: background-color 0.15s ease;
 }
 
 .activity-item:last-child { border-bottom: none; }
+
+.activity-item:hover {
+  background-color: rgba(171, 148, 95, 0.06);
+}
 
 .activity-dot {
   width: 8px;
@@ -492,6 +505,43 @@ input::placeholder { color: #4a5068; }
   font-size: 0.85rem;
   color: #6b7494;
   text-align: center;
+}
+
+/* ── CHROMEBOOK STATUS GRID ────────────────────────────────── */
+.cb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 10px;
+}
+
+.cb-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: transform 0.15s ease, opacity 0.2s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.cb-tile:hover {
+  transform: translateY(-2px);
+  opacity: 0.85;
+}
+
+.cb-tile-in {
+  background: rgba(0, 229, 160, 0.12);
+  color: #00e5a0;
+  border-color: rgba(0, 229, 160, 0.3);
+}
+
+.cb-tile-out {
+  background: rgba(255, 79, 79, 0.15);
+  color: #ff4f4f;
+  border-color: rgba(255, 79, 79, 0.3);
 }
 
 /* ── TOOLBAR (report) ────────────────────────────────────── */
@@ -541,6 +591,7 @@ td {
   font-size: 0.875rem;
   white-space: nowrap;
   color: #e8ecf4;
+  transition: background-color 0.15s ease;
 }
 
 tr:last-child td { border-bottom: none; }
@@ -565,6 +616,7 @@ tr:hover td { background: #1a1e27; }
   border-radius: 99px;
   font-size: 0.73rem;
   font-weight: 700;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .badge-out      { background: rgba(255, 79, 79, 0.15); color: #ff4f4f; }
@@ -646,6 +698,12 @@ tr:hover td { background: #1a1e27; }
   justify-content: center;
   align-items: center;
   padding: 24px;
+  animation: overlayFade 0.2s ease-out;
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .modal-box {
@@ -655,6 +713,12 @@ tr:hover td { background: #1a1e27; }
   padding: 32px;
   max-width: 420px;
   width: 100%;
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-title {
@@ -756,10 +820,11 @@ tr:hover td { background: #1a1e27; }
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-  transition: background 0.2s, border-color 0.2s;
+  transition: transform 0.3s ease, background-color 0.25s ease, border-color 0.25s ease;
 }
 
 #themeToggle:hover { opacity: 0.85; }
+#themeToggle:active { transform: scale(0.9) rotate(15deg); }
 
 /* ── LIGHT MODE OVERRIDES ────────────────────────────────── */
 body.light-mode {
@@ -821,6 +886,18 @@ body.light-mode .cb-link             { color: #9c8154; }
 
 body.light-mode .badge-in            { background: rgba(156,129,84,0.12); color: #9c8154; }
 
+body.light-mode .cb-tile-in  {
+  background: rgba(0, 200, 140, 0.12);
+  color: #0a9b6f;
+  border-color: rgba(0, 200, 140, 0.3);
+}
+
+body.light-mode .cb-tile-out {
+  background: rgba(255, 79, 79, 0.1);
+  color: #d63b3b;
+  border-color: rgba(255, 79, 79, 0.25);
+}
+
 body.light-mode .settings-card       { background: #ffffff; border-color: #e1e5f0; box-shadow: 0 2px 10px rgba(30,40,80,0.04); }
 body.light-mode .settings-divider    { border-color: #e1e5f0; }
 body.light-mode .settings-label      { color: #20232e; }
@@ -836,8 +913,6 @@ body.light-mode .topbar-title        { color: #9c8154; }
 body.light-mode #themeToggle         { background: #ffffff; border-color: #e1e5f0; box-shadow: 0 2px 12px rgba(30,40,80,0.08); }
 
 /* ── TRANSITIONS & ANIMATIONS ─────────────────────────────── */
-
-/* Tab content fade-in */
 .tab.active {
   animation: fadeSlideIn 0.25s ease-out;
 }
@@ -847,72 +922,9 @@ body.light-mode #themeToggle         { background: #ffffff; border-color: #e1e5f
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Smooth color/background transitions for theme toggle */
 body,
 .sidebar, .login-card, .form-card, .stat-card, .activity-list,
 .table-wrapper, .settings-card, .modal-box, th, td,
 .nav-item, input, .btn, #themeToggle, .topbar-mobile {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-/* Stat card hover lift */
-.stat-card {
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.25s ease, border-color 0.25s ease;
-}
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-}
-
-/* Activity items slide in slightly on hover */
-.activity-item {
-  transition: background-color 0.15s ease;
-}
-.activity-item:hover {
-  background-color: rgba(171, 148, 95, 0.06);
-}
-
-/* Table row transitions already have hover; smooth it */
-tr td {
-  transition: background-color 0.15s ease;
-}
-
-/* Modal pop-in */
-.modal-box {
-  animation: modalPop 0.2s ease-out;
-}
-
-@keyframes modalPop {
-  from { opacity: 0; transform: scale(0.95) translateY(8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.modal-overlay {
-  animation: overlayFade 0.2s ease-out;
-}
-
-@keyframes overlayFade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* Theme toggle button spin/scale on click */
-#themeToggle {
-  transition: transform 0.3s ease, background-color 0.25s ease, border-color 0.25s ease;
-}
-#themeToggle:active {
-  transform: scale(0.9) rotate(15deg);
-}
-
-/* Buttons press feedback */
-.btn {
-  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
-}
-.btn:active {
-  transform: scale(0.97);
-}
-
-/* Badge pop */
-.badge {
-  transition: background-color 0.25s ease, color 0.25s ease;
 }
