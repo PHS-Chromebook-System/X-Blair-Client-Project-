@@ -261,67 +261,34 @@
     </div>
 
     <!-- SETTINGS TAB -->
-    <!-- SETTINGS TAB -->
-<div id="settings" class="tab">
-  <div class="page-header">
-    <h2 class="page-title">Settings</h2>
-  </div>
-
-  <div class="form-card settings-card">
-
-    <!-- EMAIL BUTTON -->
-    <div class="settings-row">
-      <div class="settings-desc">
-        <div class="settings-label">Send Overdue Emails</div>
-        <div class="settings-hint">
-          Sends email reminders to all students with overdue Chromebooks.
+    <div id="settings" class="tab">
+      <div class="page-header">
+        <h2 class="page-title">Settings</h2>
+      </div>
+      <div class="form-card settings-card">
+        <div class="settings-row">
+          <div class="settings-desc">
+            <div class="settings-label">Reset Chromebook History</div>
+            <div class="settings-hint">Permanently clears the checkout history of every Chromebook. This cannot be undone.</div>
+          </div>
+          <button class="btn btn-danger" onclick="confirmResetAll()">Reset Chromebook History</button>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-row">
+          <div class="settings-desc">
+            <div class="settings-label">Export Report</div>
+            <div class="settings-hint">Download the full inventory report as a printable page.</div>
+          </div>
+          <button class="btn btn-ghost" onclick="printReport()">Export Report</button>
         </div>
       </div>
-
-      <button class="btn btn-primary" onclick="sendOverdueEmails()">
-        Send Emails
-      </button>
     </div>
 
-    <div id="emailStatus" class="msg"></div>
-
-    <div class="settings-divider"></div>
-
-    <!-- RESET -->
-    <div class="settings-row">
-      <div class="settings-desc">
-        <div class="settings-label">Reset Chromebook History</div>
-        <div class="settings-hint">
-          Permanently clears the checkout history of every Chromebook. This cannot be undone.
-        </div>
-      </div>
-
-      <button class="btn btn-danger" onclick="confirmResetAll()">
-        Reset Chromebook History
-      </button>
-    </div>
-
-    <div class="settings-divider"></div>
-
-    <!-- EXPORT -->
-    <div class="settings-row">
-      <div class="settings-desc">
-        <div class="settings-label">Export Report</div>
-        <div class="settings-hint">
-          Download the full inventory report as a printable page.
-        </div>
-      </div>
-
-      <button class="btn btn-ghost" onclick="printReport()">
-        Export Report
-      </button>
-    </div>
-
-  </div>
+  </main>
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxTLkIfPdlVi87CJ72eNeSHLXUCIzmM0SuNwbecQ2kfEl8Xp661p8Mdwr-IJw56IokL/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUm8lxluISJT7Xi0XmqHru-hzBia5rGuFbjmf10aEpPzElmjLQa6_u3yHwUokGa0Uf/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -551,28 +518,7 @@ function showDuplicateStudentModal(stuId, existingCbNum, onConfirm) {
     showMsg(msg, 'Checkout cancelled.', 'error');
   });
 }
-async function sendOverdueEmails() {
-  const msg = document.getElementById('emailStatus');
-  showMsg(msg, 'Sending emails...', '');
 
-  try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'sendOverdueEmails' })
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      showMsg(msg, `Sent ${data.count} overdue emails.`, 'success');
-    } else {
-      showMsg(msg, 'Failed to send emails.', 'error');
-    }
-
-  } catch (e) {
-    showMsg(msg, 'Network error.', 'error');
-  }
-}
 async function performCheckout(cbNum, stuId, notes, msg) {
   showMsg(msg, 'Saving...', '');
   try {
