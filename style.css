@@ -19,15 +19,15 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    /* bottom-left sweep */
+    /* bottom-left glow */
     radial-gradient(ellipse 140% 80% at -10% 110%, rgba(171,148,95,0.18) 0%, transparent 55%),
-    /* top-right sweep */
+    /* top-right glow */
     radial-gradient(ellipse 120% 70% at 110% -10%, rgba(171,148,95,0.14) 0%, transparent 55%),
     /* deep black base */
     #050507;
 }
 
-/* Animated striated gold lines — bottom-left corner cluster */
+/* Curved gold ring sweeps — bottom-left & top-right */
 body::after {
   content: '';
   position: fixed;
@@ -35,41 +35,51 @@ body::after {
   z-index: 0;
   pointer-events: none;
   background-image:
-    repeating-linear-gradient(
-      38deg,
-      transparent,
-      transparent 7px,
-      rgba(171,148,95,0.07) 7px,
-      rgba(171,148,95,0.07) 8px
+    /* bottom-left dense ring cluster */
+    repeating-radial-gradient(
+      circle at -8% 118%,
+      transparent 0px,
+      transparent 5px,
+      rgba(171,148,95,0.14) 5px,
+      rgba(171,148,95,0.14) 6px
     ),
-    repeating-linear-gradient(
-      38deg,
-      transparent,
-      transparent 18px,
-      rgba(171,148,95,0.05) 18px,
-      rgba(171,148,95,0.05) 19px
+    repeating-radial-gradient(
+      circle at -8% 118%,
+      transparent 0px,
+      transparent 13px,
+      rgba(171,148,95,0.07) 13px,
+      rgba(171,148,95,0.07) 14px
     ),
-    repeating-linear-gradient(
-      38deg,
-      transparent,
-      transparent 32px,
-      rgba(171,148,95,0.04) 32px,
-      rgba(171,148,95,0.04) 33px
+    /* top-right thin ring cluster */
+    repeating-radial-gradient(
+      circle at 110% -10%,
+      transparent 0px,
+      transparent 9px,
+      rgba(171,148,95,0.08) 9px,
+      rgba(171,148,95,0.08) 10px
+    ),
+    /* single faint outer arc, top-right */
+    repeating-radial-gradient(
+      circle at 115% -15%,
+      transparent 0px,
+      transparent 140px,
+      rgba(171,148,95,0.10) 140px,
+      rgba(171,148,95,0.10) 141px
     );
   mask-image:
-    radial-gradient(ellipse 80% 70% at 0% 100%, black 0%, transparent 65%),
-    radial-gradient(ellipse 60% 50% at 100% 0%, black 0%, transparent 60%);
+    radial-gradient(ellipse 80% 75% at -8% 112%, black 0%, transparent 65%),
+    radial-gradient(ellipse 60% 55% at 108% -8%, black 0%, transparent 60%);
   mask-composite: add;
   -webkit-mask-image:
-    radial-gradient(ellipse 80% 70% at 0% 100%, black 0%, transparent 65%),
-    radial-gradient(ellipse 60% 50% at 100% 0%, black 0%, transparent 60%);
+    radial-gradient(ellipse 80% 75% at -8% 112%, black 0%, transparent 65%),
+    radial-gradient(ellipse 60% 55% at 108% -8%, black 0%, transparent 60%);
   -webkit-mask-composite: source-over;
-  animation: waveShift 12s ease-in-out infinite alternate;
+  animation: waveShift 16s ease-in-out infinite alternate;
 }
 
 @keyframes waveShift {
-  0%   { background-position: 0px 0px, 0px 0px, 0px 0px; }
-  100% { background-position: 60px 60px, 40px 40px, 20px 20px; }
+  0%   { background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px; }
+  100% { background-position: 25px 25px, 15px 15px, 10px 10px, 6px 6px; }
 }
 
 /* Ensure all content sits above the background layers */
@@ -933,7 +943,15 @@ body.light-mode {
   background: #f7f8fc;
   color: #20232e;
 }
-body.light-mode::before              { background: radial-gradient(ellipse 140% 80% at -10% 110%, rgba(156,129,84,0.10) 0%, transparent 55%), radial-gradient(ellipse 120% 70% at 110% -10%, rgba(156,129,84,0.08) 0%, transparent 55%), #f0f2f8; }
+body.light-mode::before {
+  background:
+    radial-gradient(ellipse 140% 80% at -10% 110%, rgba(156,129,84,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 120% 70% at 110% -10%, rgba(156,129,84,0.08) 0%, transparent 55%),
+    #f0f2f8;
+}
+body.light-mode::after {
+  opacity: 0.7;
+}
 body.light-mode .login-wrapper       { background: transparent; }
 body.light-mode .login-card          { background: rgba(255,255,255,0.88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-color: rgba(156,129,84,0.25); box-shadow: 0 4px 24px rgba(30,40,80,0.08); }
 body.light-mode .login-title         { color: #9c8154; }
