@@ -292,6 +292,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziHdx63ZMyF5rT914wq
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
+let cachedReport = null;
 
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -308,8 +309,9 @@ function showApp(user) {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sidebarUser').textContent = user;
+
+  preloadData();
   loadDashboard();
-  loadSidebarCbList();
 }
 
 function login() {
@@ -442,6 +444,18 @@ async function checkout() {
   performCheckout(cbNum, stuId, notes, msg);
 }
 
+  async function preloadData() {
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+
+    cachedReport = data.rows || [];
+    allReportRows = cachedReport;
+  } catch (err) {
+    console.error('Preload failed:', err);
+  }
+}
+
 function showDuplicateStudentModal(stuId, existingCbNum, onConfirm) {
   // Remove any existing modal
   const existing = document.getElementById('duplicateStudentModal');
@@ -488,6 +502,8 @@ async function performCheckout(cbNum, stuId, notes, msg) {
     });
     const data = await res.json();
     if (data.success) {
+      cachedReport = null;
+
       showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
       document.getElementById('coNum').value = '';
       document.getElementById('coStudent').value = '';
@@ -516,6 +532,7 @@ async function checkin() {
     });
     const data = await res.json();
     if (data.success) {
+    cachedReport = null;
       showMsg(msg, `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`, 'success');
       document.getElementById('ciNum').value = '';
       document.getElementById('ciNum').focus();
@@ -530,16 +547,30 @@ async function checkin() {
 
 // ── REPORT ──────────────────────────────────────────────
 async function loadReport() {
+
+  if (cachedReport) {
+    allReportRows = cachedReport;
+    renderReport(cachedReport);
+    return;
+  }
+
   const tbody = document.getElementById('reportBody');
   if (!tbody) return;
+
   const searchEl = document.getElementById('reportSearch');
   if (searchEl) searchEl.value = '';
+
   tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Loading...</td></tr>';
+
   try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const res = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
-    allReportRows = data.rows || [];
-    renderReport(allReportRows);
+
+    cachedReport = data.rows || [];
+    allReportRows = cachedReport;
+
+    renderReport(cachedReport);
+
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="8" class="table-error">Could not load data.</td></tr>';
   }
