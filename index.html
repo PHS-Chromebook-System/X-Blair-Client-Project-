@@ -299,17 +299,12 @@ preloadData(); // start loading data immediately
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
 
-  preloadData(); // start fetching immediately
+  preloadData();
+  loadSidebarCbList();
 
   if (localStorage.getItem('cbLoggedIn')) {
     showApp(localStorage.getItem('cbLoggedIn'));
   }
-
-  document.querySelectorAll('.nav-item').forEach(btn => {
-    const match = btn.getAttribute('onclick') &&
-      btn.getAttribute('onclick').match(/showTab\('(\w+)'/);
-    if (match) btn.setAttribute('data-tab', match[1]);
-  });
 });
 
 function showApp(user) {
@@ -372,6 +367,17 @@ async function loadSidebarCbList() {
 
 // ── DASHBOARD ──────────────────────────────────────────────
 async function loadDashboard() {
+  const rows = cachedReport || [];
+
+  if (!rows.length) {
+    const res = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    cachedReport = data.rows || [];
+  }
+
+  allReportRows = cachedReport;
+  const rowsToUse = cachedReport;
+
   try {
     const res  = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
