@@ -3,10 +3,80 @@
 
 body {
   min-height: 100vh;
-  background: #0d0f14;
+  background: #050507;
   color: #e8ecf4;
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: 0.95rem;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── GOLD WAVE BACKGROUND ────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* bottom-left sweep */
+    radial-gradient(ellipse 140% 80% at -10% 110%, rgba(171,148,95,0.18) 0%, transparent 55%),
+    /* top-right sweep */
+    radial-gradient(ellipse 120% 70% at 110% -10%, rgba(171,148,95,0.14) 0%, transparent 55%),
+    /* deep black base */
+    #050507;
+}
+
+/* Animated striated gold lines — bottom-left corner cluster */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      38deg,
+      transparent,
+      transparent 7px,
+      rgba(171,148,95,0.07) 7px,
+      rgba(171,148,95,0.07) 8px
+    ),
+    repeating-linear-gradient(
+      38deg,
+      transparent,
+      transparent 18px,
+      rgba(171,148,95,0.05) 18px,
+      rgba(171,148,95,0.05) 19px
+    ),
+    repeating-linear-gradient(
+      38deg,
+      transparent,
+      transparent 32px,
+      rgba(171,148,95,0.04) 32px,
+      rgba(171,148,95,0.04) 33px
+    );
+  mask-image:
+    radial-gradient(ellipse 80% 70% at 0% 100%, black 0%, transparent 65%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, black 0%, transparent 60%);
+  mask-composite: add;
+  -webkit-mask-image:
+    radial-gradient(ellipse 80% 70% at 0% 100%, black 0%, transparent 65%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, black 0%, transparent 60%);
+  -webkit-mask-composite: source-over;
+  animation: waveShift 12s ease-in-out infinite alternate;
+}
+
+@keyframes waveShift {
+  0%   { background-position: 0px 0px, 0px 0px, 0px 0px; }
+  100% { background-position: 60px 60px, 40px 40px, 20px 20px; }
+}
+
+/* Ensure all content sits above the background layers */
+.login-wrapper,
+.app-layout {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── LOGIN ───────────────────────────────────────────────── */
@@ -16,12 +86,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #0d0f14;
+  background: transparent;
 }
 
 .login-card {
-  background: #15181f;
-  border: 1px solid #2a2f3d;
+  background: rgba(15,17,24,0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(171,148,95,0.2);
   border-radius: 16px;
   padding: 40px 36px;
   width: 100%;
@@ -29,6 +101,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  box-shadow: 0 0 60px rgba(171,148,95,0.07), 0 8px 32px rgba(0,0,0,0.5);
 }
 
 .login-header {
@@ -78,8 +151,10 @@ body {
 .sidebar {
   width: 220px;
   min-width: 220px;
-  background: #15181f;
-  border-right: 1px solid #2a2f3d;
+  background: rgba(13,15,20,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(171,148,95,0.12);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -242,6 +317,7 @@ body {
   min-width: 0;
   padding: 36px 40px;
   overflow-y: auto;
+  background: transparent;
 }
 
 /* ── TOPBAR (mobile only) ────────────────────────────────── */
@@ -857,8 +933,9 @@ body.light-mode {
   background: #f7f8fc;
   color: #20232e;
 }
-body.light-mode .login-wrapper       { background: #f7f8fc; }
-body.light-mode .login-card          { background: #ffffff; border-color: #e1e5f0; box-shadow: 0 4px 24px rgba(30,40,80,0.06); }
+body.light-mode::before              { background: radial-gradient(ellipse 140% 80% at -10% 110%, rgba(156,129,84,0.10) 0%, transparent 55%), radial-gradient(ellipse 120% 70% at 110% -10%, rgba(156,129,84,0.08) 0%, transparent 55%), #f0f2f8; }
+body.light-mode .login-wrapper       { background: transparent; }
+body.light-mode .login-card          { background: rgba(255,255,255,0.88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-color: rgba(156,129,84,0.25); box-shadow: 0 4px 24px rgba(30,40,80,0.08); }
 body.light-mode .login-title         { color: #9c8154; }
 body.light-mode .login-tagline       { color: #8b93ad; }
 
