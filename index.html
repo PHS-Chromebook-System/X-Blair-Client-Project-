@@ -288,7 +288,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpI57ldSbCFlSb0wsMABdxbFEcam3lxIy0KuUDzrqTtD6u1PIUQtDBvNVDh4FoZwfO/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4JH-l5_XafTDuaMsL1j7v4OFUJN5wHGHb8QVkS1v5Nk2le1nD3FspqAJlg3hojvip/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -527,17 +527,21 @@ async function performCheckout(cbNum, stuId, notes, msg) {
       body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), notes })
     });
     const data = await res.json();
-    if (data.success) {
-      cachedReport = null;
+   if (data.success) {
 
-      showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
-      document.getElementById('coNum').value = '';
-      document.getElementById('coStudent').value = '';
-      document.getElementById('coNotes').value = '';
-      document.getElementById('coNum').focus();
-      loadSidebarCbList();
-      loadDashboard(); // Refresh allReportRows so duplicate check stays current
-    } else {
+  await preloadData();
+
+  showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
+
+  document.getElementById('coNum').value = '';
+  document.getElementById('coStudent').value = '';
+  document.getElementById('coNotes').value = '';
+
+  document.getElementById('coNum').focus();
+
+  loadSidebarCbListFromCache();
+  loadDashboard();
+} else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
   } catch(e) {
@@ -558,12 +562,21 @@ async function checkin() {
     });
     const data = await res.json();
     if (data.success) {
-    cachedReport = null;
-      showMsg(msg, `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`, 'success');
-      document.getElementById('ciNum').value = '';
-      document.getElementById('ciNum').focus();
-      loadSidebarCbList();
-    } else {
+
+  await preloadData();
+
+  showMsg(
+    msg,
+    `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`,
+    'success'
+  );
+
+  document.getElementById('ciNum').value = '';
+  document.getElementById('ciNum').focus();
+
+  loadSidebarCbListFromCache();
+  loadDashboard();
+}else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
   } catch(e) {
@@ -792,7 +805,7 @@ async function resetAllHistory() {
   try {
     const res  = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAllHistory' }) });
     const data = await res.json();
-    if (data.success) { loadReport(); loadSidebarCbList(); }
+    if (data.success) { loadReport(); loadSidebarCbListFromCache(); }
     else if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="table-error">Error: ${data.message}</td></tr>`;
   } catch(e) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
