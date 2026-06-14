@@ -459,7 +459,6 @@ input::placeholder { color: #4a5068; }
   border: 1px solid #2a2f3d;
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 32px;
 }
 
 .activity-item {
@@ -505,43 +504,6 @@ input::placeholder { color: #4a5068; }
   font-size: 0.85rem;
   color: #6b7494;
   text-align: center;
-}
-
-/* ── CHROMEBOOK STATUS GRID ────────────────────────────────── */
-.cb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  gap: 10px;
-}
-
-.cb-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 8px;
-  border-radius: 10px;
-  font-weight: 800;
-  font-size: 0.9rem;
-  text-decoration: none;
-  border: 1px solid transparent;
-  transition: transform 0.15s ease, opacity 0.2s ease, background-color 0.25s ease, border-color 0.25s ease;
-}
-
-.cb-tile:hover {
-  transform: translateY(-2px);
-  opacity: 0.85;
-}
-
-.cb-tile-in {
-  background: rgba(0, 229, 160, 0.12);
-  color: #00e5a0;
-  border-color: rgba(0, 229, 160, 0.3);
-}
-
-.cb-tile-out {
-  background: rgba(255, 79, 79, 0.15);
-  color: #ff4f4f;
-  border-color: rgba(255, 79, 79, 0.3);
 }
 
 /* ── TOOLBAR (report) ────────────────────────────────────── */
@@ -885,18 +847,6 @@ body.light-mode tr:hover td          { background: #f7f8fc; }
 body.light-mode .cb-link             { color: #9c8154; }
 
 body.light-mode .badge-in            { background: rgba(156,129,84,0.12); color: #9c8154; }
-
-body.light-mode .cb-tile-in  {
-  background: rgba(0, 200, 140, 0.12);
-  color: #0a9b6f;
-  border-color: rgba(0, 200, 140, 0.3);
-}
-
-body.light-mode .cb-tile-out {
-  background: rgba(255, 79, 79, 0.1);
-  color: #d63b3b;
-  border-color: rgba(255, 79, 79, 0.25);
-}
 
 body.light-mode .settings-card       { background: #ffffff; border-color: #e1e5f0; box-shadow: 0 2px 10px rgba(30,40,80,0.04); }
 body.light-mode .settings-divider    { border-color: #e1e5f0; }
