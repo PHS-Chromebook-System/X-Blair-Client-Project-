@@ -274,6 +274,7 @@
           <button class="btn btn-danger" onclick="confirmResetAll()">Reset Chromebook History</button>
         </div>
         <div class="settings-divider"></div>
+        
         <div class="settings-row">
           <div class="settings-desc">
             <div class="settings-label">Export Report</div>
@@ -288,7 +289,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyUDrATcJZRwTd1_GApmVkFRtqjo73B2nIUZ_Gp_jR8PchIFqq7yRAGNIgOPRM5w5w5/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAUaWk8YsmB8gQOfELwlRP0oFAraCUMw-8Y_o-H_dEolLyq9vkYVyTwZYpihMhHclC/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -892,13 +893,66 @@ function showMsg(el, text, type) {
   el.textContent = text;
   el.className = 'msg ' + type;
 }
+function clearCache() {
+  if (!confirm('Clear local cached data?')) return;
 
+  cachedReport = null;
+  allReportRows = [];
+  allCheckedOutRows = [];
+
+  localStorage.removeItem('cbCache');
+
+  alert('Cache cleared.');
+}
+
+async function sendOverdueEmails() {
+
+  if (!confirm('Send reminder emails to all students with overdue Chromebooks?')) {
+    return;
+  }
+
+  try {
+
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'sendOverdueEmails'
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert(`Emails sent: ${data.sent}`);
+    } else {
+      alert(data.message || 'Failed to send emails.');
+    }
+
+  } catch (err) {
+    alert('Connection error.');
+  }
+}
+  
 // ── THEME TOGGLE ──────────────────────────────────────────
 function toggleTheme() {
   document.body.classList.toggle('light-mode');
   const isLight = document.body.classList.contains('light-mode');
   localStorage.setItem('cbTheme', isLight ? 'light' : 'dark');
   document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+}
+  async function manualRefresh() {
+  try {
+    cachedReport = null;
+    allReportRows = [];
+
+    await preloadData();
+    loadDashboard();
+    loadSidebarCbListFromCache();
+
+    alert('Data refreshed successfully.');
+  } catch (e) {
+    alert('Refresh failed.');
+  }
 }
 
 function initTheme() {
