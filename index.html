@@ -294,7 +294,6 @@ const ACCESS_KEY = 'chromebook';
 let allReportRows = [];
 let cachedReport = null;
 
-preloadData(); // start loading data immediately
 
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -307,12 +306,18 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function showApp(user) {
+async function showApp(user) {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sidebarUser').textContent = user;
 
-  loadDashboard();
+  // only fetch if we have nothing cached yet
+  if (!cachedReport) {
+    await preloadData();
+  } else {
+    loadSidebarCbListFromCache();
+    loadDashboard();
+  }
 }
 
 function login() {
@@ -366,72 +371,84 @@ async function loadSidebarCbList() {
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────
-async function loadDashboard() {
-  const rows = cachedReport || [];
+function loadDashboard() {
+  const rows = cachedReport;
+  if (!rows || rows.length === 0) return;
 
-  if (!rows.length) {
-    const res = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-    cachedReport = data.rows || [];
-  }
+  allReportRows = rows;
 
-  allReportRows = cachedReport;
-  const rowsToUse = cachedReport;
+  const total = rows.length;
 
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-    const rows = data.rows || [];
-    allReportRows = rows;
+  let outCount = 0;
+  let overdueCount = 0;
 
-    const total   = rows.length;
-    const outRows = rows.filter(r => r.status === 'Out');
-    const inCount = total - outRows.length;
-    const overdue = outRows.filter(r => daysSince(r.checkoutDate) > 0);
+  const activity = [];
 
-    document.getElementById('statTotal').textContent   = total;
-    document.getElementById('statIn').textContent      = inCount;
-    document.getElementById('statOut').textContent     = outRows.length;
-    document.getElementById('statOverdue').textContent = overdue.length;
+  for (let i = 0; i < total; i++) {
+    const r = rows[i];
 
-    const activity = [];
-    rows.forEach(r => {
-      if (r.checkoutDate && r.checkoutDate !== '—')
-        activity.push({ date: r.checkoutDate, text: `#${r.cbNum} checked out to ${r.studentId}`, type: 'out' });
-      if (r.checkinDate && r.checkinDate !== '—')
-        activity.push({ date: r.checkinDate, text: `#${r.cbNum} returned`, type: 'in' });
-    });
+    const status = r.status;
+    const cb = r.cbNum;
+    const student = r.studentId;
+    const outDate = r.checkoutDate;
+    const inDate = r.checkinDate;
 
-    const parseDate = s => { const p = s.split('/'); return new Date(p[2], p[0]-1, p[1]); };
-    activity.sort((a, b) => parseDate(b.date) - parseDate(a.date));
-
-    const list = document.getElementById('activityList');
-    if (!activity.length) {
-      list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
-    } else {
-      list.innerHTML = activity.slice(0, 10).map(a => `
-        <div class="activity-item">
-          <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
-          <span class="activity-text">${a.text}</span>
-          <span class="activity-date">${a.date}</span>
-        </div>
-      `).join('');
+    if (status === 'Out') {
+      outCount++;
+      if (daysSince(outDate) > 0) overdueCount++;
     }
-  } catch(e) {
-    document.getElementById('activityList').innerHTML = '<div class="activity-empty">Could not load data.</div>';
+
+    if (outDate && outDate !== '—') {
+      activity.push({
+        ts: Date.parse(outDate),
+        text: '#' + cb + ' checked out to ' + student,
+        type: 'out',
+        date: outDate
+      });
+    }
+
+    if (inDate && inDate !== '—') {
+      activity.push({
+        ts: Date.parse(inDate),
+        text: '#' + cb + ' returned',
+        type: 'in',
+        date: inDate
+      });
+    }
   }
-}
 
-function daysSince(dateStr) {
-  if (!dateStr || dateStr === '—') return 0;
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return 0;
-  const d = new Date(parts[2], parts[0]-1, parts[1]);
-  const today = new Date();
-  d.setHours(0,0,0,0); today.setHours(0,0,0,0);
-  return Math.floor((today - d) / 86400000);
-}
+  const inCount = total - outCount;
 
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statIn').textContent = inCount;
+  document.getElementById('statOut').textContent = outCount;
+  document.getElementById('statOverdue').textContent = overdueCount;
+
+  activity.sort((a, b) => b.ts - a.ts);
+
+  const list = document.getElementById('activityList');
+
+  if (activity.length === 0) {
+    list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
+    return;
+  }
+
+  const limit = activity.length < 10 ? activity.length : 10;
+
+  let html = '';
+  for (let i = 0; i < limit; i++) {
+    const a = activity[i];
+    html += `
+      <div class="activity-item">
+        <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
+        <span class="activity-text">${a.text}</span>
+        <span class="activity-date">${a.date}</span>
+      </div>
+    `;
+  }
+
+  list.innerHTML = html;
+}
 // ── CHECKOUT ──────────────────────────────────────────────
 async function checkout() {
   const cbNum = document.getElementById('coNum').value.trim();
@@ -456,13 +473,18 @@ async function checkout() {
   performCheckout(cbNum, stuId, notes, msg);
 }
 
-  async function preloadData() {
+ async function preloadData() {
   try {
     const res = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
 
     cachedReport = data.rows || [];
     allReportRows = cachedReport;
+
+    // 🔥 ONE-TIME render from cache (no more fetches anywhere else on startup)
+    loadSidebarCbListFromCache();
+    loadDashboard();
+
   } catch (err) {
     console.error('Preload failed:', err);
   }
@@ -559,20 +581,20 @@ async function checkin() {
 
 // ── REPORT ──────────────────────────────────────────────
 async function loadReport() {
+  const tbody = document.getElementById('reportBody');
+  const searchEl = document.getElementById('reportSearch');
 
+  if (searchEl) searchEl.value = '';
+
+  // 🔥 FAST PATH: use cache instantly
   if (cachedReport) {
     allReportRows = cachedReport;
     renderReport(cachedReport);
     return;
   }
 
-  const tbody = document.getElementById('reportBody');
-  if (!tbody) return;
-
-  const searchEl = document.getElementById('reportSearch');
-  if (searchEl) searchEl.value = '';
-
-  tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Loading...</td></tr>';
+  // fallback (only if cache empty)
+  tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
 
   try {
     const res = await fetch(SCRIPT_URL + '?action=report');
@@ -582,9 +604,8 @@ async function loadReport() {
     allReportRows = cachedReport;
 
     renderReport(cachedReport);
-
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="8" class="table-error">Could not load data.</td></tr>';
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="8">Error loading data</td></tr>';
   }
 }
 
@@ -617,6 +638,27 @@ function filterReport() {
   );
   renderReport(filtered);
 }
+function updateDashboardFromCache() {
+  loadDashboard();
+}
+
+function loadSidebarCbListFromCache() {
+  const grid = document.getElementById('sidebarCbGrid');
+  const rows = cachedReport || [];
+
+  if (!rows.length) return;
+
+  const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
+
+  grid.innerHTML = sorted.map(r => `
+    <a href="#"
+       class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
+       onclick="viewHistory('${r.cbNum}'); return false;"
+       title="#${r.cbNum} — ${r.status}">
+      ${r.cbNum}
+    </a>
+  `).join('');
+}
 
 // ── CHECKED OUT ──────────────────────────────────────────────
 let allCheckedOutRows = [];
@@ -624,21 +666,37 @@ let allCheckedOutRows = [];
 async function loadCheckedOut() {
   const tbody = document.getElementById('checkedoutBody');
   if (!tbody) return;
+
   const searchEl = document.getElementById('checkedoutSearch');
   if (searchEl) searchEl.value = '';
-  tbody.innerHTML = '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
+
+  tbody.innerHTML =
+    '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
+
   try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-    const rows = (data.rows || []).filter(r => r.status === 'Out');
-    rows.sort((a, b) => daysSince(b.checkoutDate) - daysSince(a.checkoutDate));
+
+    if (!cachedReport) {
+      const res = await fetch(SCRIPT_URL + '?action=report');
+      const data = await res.json();
+
+      cachedReport = data.rows || [];
+      allReportRows = cachedReport;
+    }
+
+    const rows = cachedReport
+      .filter(r => r.status === 'Out')
+      .sort((a, b) =>
+        daysSince(b.checkoutDate) - daysSince(a.checkoutDate)
+      );
+
     allCheckedOutRows = rows;
     renderCheckedOut(rows);
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
+
+  } catch (e) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
   }
 }
-
 function renderCheckedOut(rows) {
   const tbody = document.getElementById('checkedoutBody');
   if (!rows.length) {
