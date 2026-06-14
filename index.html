@@ -62,10 +62,15 @@
       <button class="nav-item" onclick="showTab('settings', this)">
         <span class="nav-icon">⚙</span> Settings
       </button>
-      <button class="nav-item" onclick="showTab('allchromebooks', this)">
-        <span class="nav-icon">▦</span> All Chromebooks
-      </button>
     </nav>
+
+    <!-- ALL CHROMEBOOKS STATUS LIST -->
+    <div class="sidebar-cb-section">
+      <div class="sidebar-cb-label">All Chromebooks</div>
+      <div class="sidebar-cb-grid" id="sidebarCbGrid">
+        <div class="sidebar-cb-loading">Loading...</div>
+      </div>
+    </div>
 
     <div class="sidebar-footer">
       <div class="signed-in-label">Signed in as</div>
@@ -279,24 +284,6 @@
       </div>
     </div>
 
-    <!-- ALL CHROMEBOOKS TAB -->
-    <div id="allchromebooks" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">All Chromebooks</h2>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>CB #</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="allCbBody"></tbody>
-        </table>
-      </div>
-    </div>
-
   </main>
 </div>
 
@@ -322,6 +309,7 @@ function showApp(user) {
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sidebarUser').textContent = user;
   loadDashboard();
+  loadSidebarCbList();
 }
 
 function login() {
@@ -347,10 +335,31 @@ function showTab(name, btn) {
   document.getElementById(name).classList.add('active');
   if (btn) btn.classList.add('active');
 
-  if (name === 'dashboard')      loadDashboard();
-  if (name === 'report')         loadReport();
-  if (name === 'checkedout')     loadCheckedOut();
-  if (name === 'allchromebooks') loadAllChromebooks();
+  if (name === 'dashboard')  loadDashboard();
+  if (name === 'report')     loadReport();
+  if (name === 'checkedout') loadCheckedOut();
+}
+
+// ── SIDEBAR CHROMEBOOK STATUS LIST ──────────────────────────
+async function loadSidebarCbList() {
+  const grid = document.getElementById('sidebarCbGrid');
+  if (!grid) return;
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=report');
+    const data = await res.json();
+    const rows = data.rows || [];
+    if (!rows.length) {
+      grid.innerHTML = '<div class="sidebar-cb-empty">None</div>';
+      return;
+    }
+    const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
+    grid.innerHTML = sorted.map(r => `
+      <a href="#" class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
+         onclick="viewHistory('${r.cbNum}'); return false;" title="#${r.cbNum} — ${r.status}">${r.cbNum}</a>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="sidebar-cb-empty">Error</div>';
+  }
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────
@@ -429,6 +438,7 @@ async function checkout() {
       document.getElementById('coStudent').value = '';
       document.getElementById('coNotes').value = '';
       document.getElementById('coNum').focus();
+      loadSidebarCbList();
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
@@ -453,6 +463,7 @@ async function checkin() {
       showMsg(msg, `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`, 'success');
       document.getElementById('ciNum').value = '';
       document.getElementById('ciNum').focus();
+      loadSidebarCbList();
     } else {
       showMsg(msg, data.message || 'Error.', 'error');
     }
@@ -557,31 +568,6 @@ function filterCheckedOut() {
   renderCheckedOut(filtered);
 }
 
-// ── ALL CHROMEBOOKS ──────────────────────────────────────────
-async function loadAllChromebooks() {
-  const tbody = document.getElementById('allCbBody');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="2" class="table-loading">Loading...</td></tr>';
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-    const rows = data.rows || [];
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="2" class="table-empty">No Chromebooks found.</td></tr>';
-      return;
-    }
-    const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
-    tbody.innerHTML = sorted.map(r => `
-      <tr>
-        <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
-        <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in-green'}">${r.status}</span></td>
-      </tr>
-    `).join('');
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="2" class="table-error">Could not load data.</td></tr>';
-  }
-}
-
 // ── HISTORY ──────────────────────────────────────────────
 async function viewHistory(cbNum) {
   const histBtn = document.getElementById('historyNavBtn');
@@ -657,7 +643,7 @@ async function resetAllHistory() {
   try {
     const res  = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAllHistory' }) });
     const data = await res.json();
-    if (data.success) { loadReport(); }
+    if (data.success) { loadReport(); loadSidebarCbList(); }
     else if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="table-error">Error: ${data.message}</td></tr>`;
   } catch(e) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
