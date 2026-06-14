@@ -1,11 +1,13 @@
-const SHEET_ID = '1vl2QdtUazaNVgfiSdklPwqg-qAOurJ9VcVMzOZPUMHg';
+const SHEET_ID = '1l7eJ8iqc7zTGliKSqJUZIb055DujaIXnu5WazJyU3_c';
 const OVERDUE_SHEET = 'Overdue Chromes';
+const CACHE_TIME = 60 * 5; // 5 minutes
 
 function doGet(e) {
   const action = e.parameter.action;
   if (action === 'report')  return getReport();
   if (action === 'overdue') return getOverdue();
   if (action === 'history') return getHistory(e.parameter.cbNum);
+  if (action === 'summary') return getSummary();
   return ContentService.createTextOutput('Invalid').setMimeType(ContentService.MimeType.TEXT);
 }
 
@@ -55,15 +57,42 @@ function resetAllHistory() {
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
-    if (data.action === 'checkout')        return checkOut(data);
-    if (data.action === 'checkin')         return checkIn(data);
-    if (data.action === 'resetHistory')    return resetCbHistory(data);
-    if (data.action === 'resetAllHistory') return resetAllHistory();
-    return jsonResponse({ success: false, message: 'Unknown action' });
-  } catch(err) {
-    return jsonResponse({ success: false, message: 'Parse error: ' + err.message });
+
+    if (data.action === "sendOverdueEmails") {
+      return ContentService
+        .createTextOutput(JSON.stringify(sendAllOverdueEmails()))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === "checkout") {
+      return checkout(data);
+    }
+
+    if (data.action === "checkin") {
+      return checkIn(data);
+    }
+
+    if (data.action === "resetHistory") {
+      return resetCbHistory(data);
+    }
+
+    if (data.action === "resetAllHistory") {
+      return resetAllHistory();
+    }
+
+    return jsonResponse({
+      success: false,
+      message: "Unknown action"
+    });
+
+  } catch (err) {
+    return jsonResponse({
+      success: false,
+      message: "Parse error: " + err.message
+    });
   }
 }
+
 
 function formatDate(val) {
   if (!val) return '—';
@@ -144,7 +173,7 @@ function removeFromOverdue(cbNum) {
   }
 }
 
-function checkOut(data) {
+function checkout(data) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
 
   const main = ss.getSheetByName('Main');
@@ -245,54 +274,106 @@ for (let i = rows.length - 1; i >= 3; i--) {
   });
 }
 
+function getSummary() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const main = ss.getSheetByName('Main');
+  const rows = main.getDataRange().getValues();
+
+  let total = rows.length - 1;
+  let out = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const cbNum = rows[i][0];
+    const sheet = ss.getSheetByName(String(cbNum));
+    if (!sheet) continue;
+
+    const lastRow = sheet.getLastRow();
+    const data = sheet.getRange(lastRow, 1, 1, 6).getValues()[0];
+
+    if (data && !data[2]) out++;
+  }
+
+  return jsonResponse({
+    total,
+    out,
+    in: total - out
+  });
+}
+
 
 function getReport() {
-  const ss       = SpreadsheetApp.openById(SHEET_ID);
-  const main     = ss.getSheetByName('Main');
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("report");
+
+  if (cached) {
+    return ContentService
+      .createTextOutput(cached)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const main = ss.getSheetByName('Main');
   const mainRows = main.getDataRange().getValues();
-  const result   = [];
+
+  const result = [];
+
   for (let i = 1; i < mainRows.length; i++) {
     const cbNum   = mainRows[i][0];
     const barcode = mainRows[i][1];
     const serial  = mainRows[i][2];
     if (!cbNum) continue;
+
     const sheet = ss.getSheetByName(String(cbNum));
     if (!sheet) continue;
+
     const lastRow = sheet.getLastRow();
-  const rows = sheet.getRange(1, 1, lastRow, 6).getValues();
+    if (lastRow < 4) {
+      result.push({
+        cbNum, barcode, serial,
+        studentId: '—',
+        checkoutDate: '—',
+        checkinDate: '—',
+        notes: '',
+        status: 'In'
+      });
+      continue;
+    }
+
+    const rows = sheet.getRange(1, 1, lastRow, 6).getValues();
+
     let latest = null;
 
-for (let j = rows.length - 1; j >= 3; j--) {
-  if (rows[j][0]) {
-    latest = rows[j];
-    break;
-  }
-}
+    for (let j = rows.length - 1; j >= 3; j--) {
+      if (rows[j][0]) {
+        latest = rows[j];
+        break;
+      }
+    }
+
     if (latest) {
       const isOut = !latest[2];
-      // Auto-add to overdue if out and overdue
-     /* if (isOut && isOverdue(latest[1])) {
-        addToOverdue(cbNum, barcode, latest[0], formatDate(latest[1]));
-      }*/
+
       result.push({
-        cbNum, barcode, serial,
-        studentId:    latest[0],
+        cbNum,
+        barcode,
+        serial,
+        studentId: latest[0],
         checkoutDate: formatDate(latest[1]),
-        checkinDate:  latest[2] ? formatDate(latest[2]) : '—',
-        notes:        latest[5] || '',
-        status:       isOut ? 'Out' : 'In'
-      });
-    } else {
-      result.push({
-        cbNum, barcode, serial,
-        studentId: '—', checkoutDate: '—', checkinDate: '—',
-        notes: '', status: 'In'
+        checkinDate: latest[2] ? formatDate(latest[2]) : '—',
+        notes: latest[5] || '',
+        status: isOut ? 'Out' : 'In'
       });
     }
   }
-  return jsonResponse({ rows: result });
-}
 
+  const output = JSON.stringify({ rows: result });
+
+  cache.put("report", output, CACHE_TIME); // 🔥 store result
+
+  return ContentService
+    .createTextOutput(output)
+    .setMimeType(ContentService.MimeType.JSON);
+}
 function getOverdue() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const main = ss.getSheetByName('Main');
@@ -362,5 +443,76 @@ function scanCheckinBarcode() {
   if (!barcode) return;
 
   document.getElementById("ciNum").value = barcode;
+}
+
+function sendOverdueEmail(email, studentId, cbNum, daysOut) {
+
+  const subject = `Overdue Chromebook Notice - Chromebook #${cbNum}`;
+
+  const body =
+`Hello,
+
+Our records indicate that Chromebook #${cbNum} is currently checked out under Student ID ${studentId}.
+
+This Chromebook has been checked out for ${daysOut} day(s).
+
+Please return the Chromebook to the media center as soon as possible.
+
+Thank you,
+Poolesville Media Center`;
+
+  MailApp.sendEmail(
+    email,
+    subject,
+    body
+  );
+}
+
+function sendAllOverdueEmails() {
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+
+  let sentCount = 0;
+
+  ss.getSheets().forEach(sheet => {
+
+    if (sheet.getName() === "Main") return;
+
+    const values = sheet.getDataRange().getValues();
+
+    let latest = null;
+
+    for (let i = values.length - 1; i >= 3; i--) {
+      if (values[i][0]) {
+        latest = values[i];
+        break;
+      }
+    }
+
+    if (!latest) return;
+
+    const studentId = latest[0];
+    const checkinDate = latest[2];
+
+    if (!checkinDate) {
+
+      const email = studentId + "@mcpsmd.net";
+
+      MailApp.sendEmail(
+        email,
+        "Chromebook Return Reminder",
+        "Our records indicate that Chromebook #" +
+        sheet.getName() +
+        " is currently checked out to you. Please return it when finished."
+      );
+
+      sentCount++;
+    }
+  });
+
+  return {
+    success: true,
+    count: sentCount
+  };
 }
 
