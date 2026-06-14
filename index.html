@@ -295,13 +295,11 @@ let allReportRows = [];
 let cachedReport = null;
 
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
 
-  preloadData();
-  loadSidebarCbList();
-
   if (localStorage.getItem('cbLoggedIn')) {
+    await preloadData();
     showApp(localStorage.getItem('cbLoggedIn'));
   }
 });
@@ -311,13 +309,12 @@ async function showApp(user) {
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sidebarUser').textContent = user;
 
-  // only fetch if we have nothing cached yet
   if (!cachedReport) {
     await preloadData();
-  } else {
-    loadSidebarCbListFromCache();
-    loadDashboard();
   }
+
+  loadSidebarCbListFromCache();
+  loadDashboard();
 }
 
 function login() {
@@ -481,15 +478,10 @@ async function checkout() {
     cachedReport = data.rows || [];
     allReportRows = cachedReport;
 
-    // 🔥 ONE-TIME render from cache (no more fetches anywhere else on startup)
-    loadSidebarCbListFromCache();
-    loadDashboard();
-
   } catch (err) {
     console.error('Preload failed:', err);
   }
 }
-
 function showDuplicateStudentModal(stuId, existingCbNum, onConfirm) {
   // Remove any existing modal
   const existing = document.getElementById('duplicateStudentModal');
