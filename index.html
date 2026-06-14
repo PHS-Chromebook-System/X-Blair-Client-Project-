@@ -120,6 +120,11 @@
       <div class="activity-list" id="activityList">
         <div class="activity-loading">Loading activity...</div>
       </div>
+
+      <div class="section-label">All Chromebooks</div>
+      <div class="cb-grid" id="cbGrid">
+        <div class="activity-loading">Loading...</div>
+      </div>
     </div>
 
     <!-- COMBINED CHECK OUT / CHECK IN TAB -->
@@ -232,8 +237,8 @@
       </div>
       <div class="toolbar">
         <input id="checkedoutSearch" placeholder="Search by Chromebook #" oninput="filterCheckedOut()" class="search-input">
-        <button class="btn btn-ghost" onclick="printCheckedOut()">Print Report</button>
-    </div>
+        <button class="btn btn-ghost" onclick="printCheckedOut()">🖨 Print Report</button>
+      </div>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -337,6 +342,7 @@ async function loadDashboard() {
     const res  = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
     const rows = data.rows || [];
+    allReportRows = rows;
 
     const total   = rows.length;
     const outRows = rows.filter(r => r.status === 'Out');
@@ -363,7 +369,7 @@ async function loadDashboard() {
     if (!activity.length) {
       list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
     } else {
-      list.innerHTML = activity.slice(0, 8).map(a => `
+      list.innerHTML = activity.slice(0, 10).map(a => `
         <div class="activity-item">
           <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
           <span class="activity-text">${a.text}</span>
@@ -371,8 +377,23 @@ async function loadDashboard() {
         </div>
       `).join('');
     }
+
+    // ── CHROMEBOOK STATUS GRID ──────────────────────────────
+    const grid = document.getElementById('cbGrid');
+    if (!rows.length) {
+      grid.innerHTML = '<div class="activity-empty">No Chromebooks found.</div>';
+    } else {
+      const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
+      grid.innerHTML = sorted.map(r => `
+        <a href="#" class="cb-tile ${r.status === 'Out' ? 'cb-tile-out' : 'cb-tile-in'}"
+           onclick="viewHistory('${r.cbNum}'); return false;">
+          #${r.cbNum}
+        </a>
+      `).join('');
+    }
   } catch(e) {
     document.getElementById('activityList').innerHTML = '<div class="activity-empty">Could not load data.</div>';
+    document.getElementById('cbGrid').innerHTML = '<div class="activity-empty">Could not load data.</div>';
   }
 }
 
@@ -674,7 +695,7 @@ function printReport() {
   setTimeout(() => pw.print(), 500);
 }
 
-  function printCheckedOut() {
+function printCheckedOut() {
   const content = document.getElementById('checkedout').innerHTML;
   const pw = window.open('', '_blank');
   pw.document.write(`
@@ -697,7 +718,7 @@ function showMsg(el, text, type) {
   el.className = 'msg ' + type;
 }
 
-  // ── THEME TOGGLE ──────────────────────────────────────────
+// ── THEME TOGGLE ──────────────────────────────────────────
 function toggleTheme() {
   document.body.classList.toggle('light-mode');
   const isLight = document.body.classList.contains('light-mode');
@@ -712,7 +733,6 @@ function initTheme() {
     document.getElementById('themeToggle').textContent = '☀️';
   }
 }
-  
 </script>
   <button id="themeToggle" onclick="toggleTheme()">🌙</button>
 </body>
