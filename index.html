@@ -262,34 +262,96 @@
 
     <!-- SETTINGS TAB -->
     <div id="settings" class="tab">
-      <div class="page-header">
-        <h2 class="page-title">Settings</h2>
-      </div>
-      <div class="form-card settings-card">
-        <div class="settings-row">
-          <div class="settings-desc">
-            <div class="settings-label">Reset Chromebook History</div>
-            <div class="settings-hint">Permanently clears the checkout history of every Chromebook. This cannot be undone.</div>
-          </div>
-          <button class="btn btn-danger" onclick="confirmResetAll()">Reset Chromebook History</button>
+  <div class="page-header">
+    <h2 class="page-title">Settings</h2>
+  </div>
+
+  <div class="form-card settings-card">
+
+    <!-- OVERDUE EMAILS -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Send Overdue Emails</div>
+        <div class="settings-hint">
+          Sends emails to all students with Chromebooks overdue.
+          Format: studentId@mcpsmd.net
         </div>
-        <div class="settings-divider"></div>
-        
-        <div class="settings-row">
-          <div class="settings-desc">
-            <div class="settings-label">Export Report</div>
-            <div class="settings-hint">Download the full inventory report as a printable page.</div>
-          </div>
-          <button class="btn btn-ghost" onclick="printReport()">Export Report</button>
-        </div>
+        <div id="emailStatus" class="msg"></div>
       </div>
+
+      <button class="btn btn-primary" onclick="sendOverdueEmails()">
+        📧 Send Emails
+      </button>
     </div>
+
+    <div class="settings-divider"></div>
+
+    <!-- RESET -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Reset Chromebook History</div>
+        <div class="settings-hint">
+          Permanently clears all records.
+        </div>
+      </div>
+      <button class="btn btn-danger" onclick="confirmResetAll()">
+        Reset History
+      </button>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <!-- EXPORT -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Export Report</div>
+        <div class="settings-hint">
+          Print full inventory report.
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="printReport()">
+        🖨 Export
+      </button>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <!-- REFRESH -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Refresh Data</div>
+        <div class="settings-hint">
+          Reload latest data from server.
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="manualRefresh()">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <!-- CACHE -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Clear Cache</div>
+        <div class="settings-hint">
+          Clears locally stored data.
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="clearCache()">
+        🧹 Clear
+      </button>
+    </div>
+
+  </div>
+</div>
 
   </main>
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAUaWk8YsmB8gQOfELwlRP0oFAraCUMw-8Y_o-H_dEolLyq9vkYVyTwZYpihMhHclC/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQvodLfVib7Q4-9KlTvxYPjOSa_g6X_x7GNW37Ydg1qFCmuNFfY155K25nKcXEWcNE/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -333,6 +395,15 @@ function logout() {
   localStorage.removeItem('cbLoggedIn');
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function daysSince(dateString) {
+  if (!dateString) return 0;
+
+  const d = new Date(dateString);
+  const now = new Date();
+
+  return Math.floor((now - d) / (1000 * 60 * 60 * 24));
 }
 
 function showTab(name, btn) {
