@@ -316,33 +316,36 @@
 
     <div class="settings-divider"></div>
 
-    <!-- REFRESH -->
-    <div class="settings-row">
-      <div class="settings-desc">
-        <div class="settings-label">Refresh Data</div>
-        <div class="settings-hint">
-          Reload latest data from server.
-        </div>
-      </div>
-      <button class="btn btn-secondary" onclick="manualRefresh()">
-        🔄 Refresh
-      </button>
+  <!-- REFRESH -->
+<!-- SPREADSHEET -->
+<div class="settings-row">
+  <div class="settings-desc">
+    <div class="settings-label">Open Spreadsheet</div>
+    <div class="settings-hint">
+      Open the Chromebook inventory spreadsheet.
     </div>
+  </div>
+  <button class="btn btn-secondary"
+    onclick="window.open('https://docs.google.com/spreadsheets/d/1l7eJ8iqc7zTGliKSqJUZIb055DujaIXnu5WazJyU3_c/edit?usp=sharing', '_blank')">
+    📊 Open
+  </button>
+</div>
 
-    <div class="settings-divider"></div>
+<div class="settings-divider"></div>
 
-    <!-- CACHE -->
-    <div class="settings-row">
-      <div class="settings-desc">
-        <div class="settings-label">Clear Cache</div>
-        <div class="settings-hint">
-          Clears locally stored data.
-        </div>
-      </div>
-      <button class="btn btn-ghost" onclick="clearCache()">
-        🧹 Clear
-      </button>
+<!-- USER MANUAL -->
+<div class="settings-row">
+  <div class="settings-desc">
+    <div class="settings-label">User Manual</div>
+    <div class="settings-hint">
+      Open the Chromebook system user guide.
     </div>
+  </div>
+  <button class="btn btn-ghost"
+    onclick="window.open('https://docs.google.com/document/d/1IorSdC79GefMJM1_nAKdR4_oqfv4-T-6o8nij9iJizA/edit?usp=sharing', '_blank')">
+    📖 Open
+  </button>
+</div>
 
   </div>
 </div>
@@ -964,17 +967,6 @@ function showMsg(el, text, type) {
   el.textContent = text;
   el.className = 'msg ' + type;
 }
-function clearCache() {
-  if (!confirm('Clear local cached data?')) return;
-
-  cachedReport = null;
-  allReportRows = [];
-  allCheckedOutRows = [];
-
-  localStorage.removeItem('cbCache');
-
-  alert('Cache cleared.');
-}
 
 async function sendOverdueEmails() {
 
@@ -1011,21 +1003,7 @@ function toggleTheme() {
   localStorage.setItem('cbTheme', isLight ? 'light' : 'dark');
   document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
 }
-  async function manualRefresh() {
-  try {
-    cachedReport = null;
-    allReportRows = [];
-
-    await preloadData();
-    loadDashboard();
-    loadSidebarCbListFromCache();
-
-    alert('Data refreshed successfully.');
-  } catch (e) {
-    alert('Refresh failed.');
-  }
-}
-
+  
 function initTheme() {
   const saved = localStorage.getItem('cbTheme');
   if (saved === 'light') {
