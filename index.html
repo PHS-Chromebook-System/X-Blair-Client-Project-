@@ -260,55 +260,63 @@
       </div>
     </div>
 
+    <!-- SETTINGS TAB -->
+    <div id="settings" class="tab">
+  <div class="page-header">
+    <h2 class="page-title">Settings</h2>
+  </div>
+
+  <div class="form-card settings-card">
+
+    <!-- OVERDUE EMAILS -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Send Overdue Emails</div>
+        <div class="settings-hint">
+          Sends emails to all students with Chromebooks overdue.
+          Format: studentId@mcpsmd.net
+        </div>
+        <div id="emailStatus" class="msg"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="sendOverdueEmails()">
+        📧 Send Emails
+      </button>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <!-- RESET -->
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Reset Chromebook History</div>
+        <div class="settings-hint">
+          Permanently clears all records.
+        </div>
+      </div>
+      <button class="btn btn-danger" onclick="confirmResetAll()">
+        Reset History
+      </button>
+    </div>
+
+    <div class="settings-divider"></div>
+
     <!-- EXPORT -->
-<div class="settings-row">
-  <div class="settings-desc">
-    <div class="settings-label">Export Report</div>
-    <div class="settings-hint">
-      Print full inventory report.
+    <div class="settings-row">
+      <div class="settings-desc">
+        <div class="settings-label">Export Report</div>
+        <div class="settings-hint">
+          Print full inventory report.
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="printReport()">
+        🖨 Export
+      </button>
     </div>
-  </div>
-  <button class="btn btn-ghost" onclick="printReport()">
-    🖨 Export
-  </button>
-</div>
 
-<div class="settings-divider"></div>
+    <div class="settings-divider"></div>
 
-<!-- ADD CHROMEBOOK -->
-<div class="settings-row">
-  <div class="settings-desc">
-    <div class="settings-label">Add Chromebook</div>
-    <div class="settings-hint">
-      Creates a new Chromebook sheet and history record.
-    </div>
-  </div>
-
-  <input id="newCbNum" placeholder="CB #" style="width:80px;">
-  <button class="btn btn-primary" onclick="addChromebook()">
-    ➕ Add
-  </button>
-</div>
-
-<div class="settings-divider"></div>
-
-<!-- REMOVE CHROMEBOOK -->
-<div class="settings-row">
-  <div class="settings-desc">
-    <div class="settings-label">Remove Chromebook</div>
-    <div class="settings-hint">
-      Deletes a Chromebook sheet and all history.
-    </div>
-  </div>
-
-  <input id="removeCbNum" placeholder="CB #" style="width:80px;">
-  <button class="btn btn-danger" onclick="removeChromebook()">
-    🗑 Remove
-  </button>
-</div>
-
-<div class="settings-divider"></div>
-
+  <!-- REFRESH -->
 <!-- SPREADSHEET -->
 <div class="settings-row">
   <div class="settings-desc">
@@ -318,7 +326,7 @@
     </div>
   </div>
   <button class="btn btn-secondary"
-    onclick="window.open('YOUR_SPREADSHEET_LINK', '_blank')">
+    onclick="window.open('https://docs.google.com/spreadsheets/d/1l7eJ8iqc7zTGliKSqJUZIb055DujaIXnu5WazJyU3_c/edit?usp=sharing', '_blank')">
     📊 Open
   </button>
 </div>
@@ -346,7 +354,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTUaFV_cwROPKOmejBLVSB7Z2xeTrdyTXEB5Y9FDNn39I9LUIQZzVSWVdtXxnh7gk8/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGCGIKe9TFAbu05KjRAsLL6907Q7DcBWc-6Zu6WFqPRzHudNLd5EUhIdphjQciMQrP/exec';
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
@@ -878,65 +886,6 @@ async function resetAllHistory() {
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
   }
 }
-  async function addChromebook() {
-
-  const cbNum = document.getElementById('newCbNum').value.trim();
-
-  if (!cbNum) {
-    alert('Enter Chromebook number');
-    return;
-  }
-
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'addChromebook',
-      cbNum
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    alert('Chromebook added.');
-    await preloadData();
-    loadSidebarCbListFromCache();
-    loadDashboard();
-  } else {
-    alert(data.message);
-  }
-}
-
-async function removeChromebook() {
-
-  const cbNum = document.getElementById('removeCbNum').value.trim();
-
-  if (!cbNum) {
-    alert('Enter Chromebook number');
-    return;
-  }
-
-  if (!confirm(`Delete Chromebook #${cbNum}?`)) return;
-
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'removeChromebook',
-      cbNum
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    alert('Chromebook removed.');
-    await preloadData();
-    loadSidebarCbListFromCache();
-    loadDashboard();
-  } else {
-    alert(data.message);
-  }
-}
 
 // ── SCANNER ──────────────────────────────────────────────
 let html5Scanner = null;
@@ -1066,4 +1015,5 @@ function initTheme() {
   <button id="themeToggle" onclick="toggleTheme()">🌙</button>
 </body>
 </html>
+
 
