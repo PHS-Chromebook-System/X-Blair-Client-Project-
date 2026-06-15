@@ -357,12 +357,38 @@ const ACCESS_KEY = 'chromebook';
 let allReportRows = [];
 let cachedReport = null;
 
+/* ───────────────────────────────
+   MASTER DATA FETCH
+─────────────────────────────── */
+async function fetchLatest() {
+  const res = await fetch(SCRIPT_URL + '?action=report');
+  const data = await res.json();
+  return data.rows || [];
+}
 
+/* ───────────────────────────────
+   🔥 SINGLE SOURCE OF TRUTH UI UPDATE
+─────────────────────────────── */
+async function refreshAllUI() {
+  const rows = await fetchLatest();
+
+  cachedReport = rows;
+  allReportRows = rows;
+
+  loadDashboardFromRows(rows);
+  renderSidebar(rows);
+  renderReport(rows);
+  renderCheckedOut(rows);
+}
+
+/* ───────────────────────────────
+   INIT
+─────────────────────────────── */
 window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
 
   if (localStorage.getItem('cbLoggedIn')) {
-    await preloadData();
+    await refreshAllUI();
     showApp(localStorage.getItem('cbLoggedIn'));
   }
 });
@@ -372,21 +398,21 @@ async function showApp(user) {
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sidebarUser').textContent = user;
 
-  if (!cachedReport) {
-    await preloadData();
-  }
-
-  loadSidebarCbListFromCache();
-  loadDashboard();
+  await refreshAllUI();
 }
 
+/* ───────────────────────────────
+   LOGIN / LOGOUT
+─────────────────────────────── */
 function login() {
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value.trim();
   const msg  = document.getElementById('loginMsg');
-  if (!user) { showMsg(msg, 'Please enter your school name.', 'error'); return; }
-  if (!pass) { showMsg(msg, 'Please enter the access key.', 'error'); return; }
-  if (pass !== ACCESS_KEY) { showMsg(msg, 'Incorrect access key. Ask your administrator.', 'error'); return; }
+
+  if (!user) return showMsg(msg, 'Enter school name.', 'error');
+  if (!pass) return showMsg(msg, 'Enter access key.', 'error');
+  if (pass !== ACCESS_KEY) return showMsg(msg, 'Wrong key.', 'error');
+
   localStorage.setItem('cbLoggedIn', user);
   showApp(user);
 }
@@ -397,641 +423,177 @@ function logout() {
   document.getElementById('loginScreen').classList.remove('hidden');
 }
 
-function daysSince(dateString) {
-  if (!dateString) return 0;
-
-  const d = new Date(dateString);
-  const now = new Date();
-
-  return Math.floor((now - d) / (1000 * 60 * 60 * 24));
-}
-
-function showTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  document.getElementById(name).classList.add('active');
-  if (btn) btn.classList.add('active');
-
-  if (name === 'dashboard')  loadDashboard();
-  if (name === 'report')     loadReport();
-  if (name === 'checkedout') loadCheckedOut();
-}
-
-// ── SIDEBAR CHROMEBOOK STATUS LIST ──────────────────────────
-async function loadSidebarCbList() {
+/* ───────────────────────────────
+   SIDEBAR (FIXED)
+─────────────────────────────── */
+function renderSidebar(rows) {
   const grid = document.getElementById('sidebarCbGrid');
-  if (!grid) return;
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-    const rows = data.rows || [];
-    if (!rows.length) {
-      grid.innerHTML = '<div class="sidebar-cb-empty">None</div>';
-      return;
-    }
-    const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
-    grid.innerHTML = sorted.map(r => `
-      <a href="#" class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
-         onclick="viewHistory('${r.cbNum}'); return false;" title="#${r.cbNum} — ${r.status}">${r.cbNum}</a>
-    `).join('');
-  } catch(e) {
-    grid.innerHTML = '<div class="sidebar-cb-empty">Error</div>';
-  }
-}
-
-// ── DASHBOARD ──────────────────────────────────────────────
-function loadDashboard() {
-  const rows = cachedReport;
-  if (!rows || rows.length === 0) return;
-
-  allReportRows = rows;
-
-  const total = rows.length;
-
-  let outCount = 0;
-  let overdueCount = 0;
-
-  const activity = [];
-
-  for (let i = 0; i < total; i++) {
-    const r = rows[i];
-
-    const status = r.status;
-    const cb = r.cbNum;
-    const student = r.studentId;
-    const outDate = r.checkoutDate;
-    const inDate = r.checkinDate;
-
-    if (status === 'Out') {
-      outCount++;
-      if (daysSince(outDate) > 0) overdueCount++;
-    }
-
-    if (outDate && outDate !== '—') {
-      activity.push({
-        ts: Date.parse(outDate),
-        text: '#' + cb + ' checked out to ' + student,
-        type: 'out',
-        date: outDate
-      });
-    }
-
-    if (inDate && inDate !== '—') {
-      activity.push({
-        ts: Date.parse(inDate),
-        text: '#' + cb + ' returned',
-        type: 'in',
-        date: inDate
-      });
-    }
-  }
-
-  const inCount = total - outCount;
-
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statIn').textContent = inCount;
-  document.getElementById('statOut').textContent = outCount;
-  document.getElementById('statOverdue').textContent = overdueCount;
-
-  activity.sort((a, b) => b.ts - a.ts);
-
-  const list = document.getElementById('activityList');
-
-  if (activity.length === 0) {
-    list.innerHTML = '<div class="activity-empty">No recent activity.</div>';
-    return;
-  }
-
-  const limit = activity.length < 10 ? activity.length : 10;
-
-  let html = '';
-  for (let i = 0; i < limit; i++) {
-    const a = activity[i];
-    html += `
-      <div class="activity-item">
-        <span class="activity-dot ${a.type === 'out' ? 'dot-out' : 'dot-in'}"></span>
-        <span class="activity-text">${a.text}</span>
-        <span class="activity-date">${a.date}</span>
-      </div>
-    `;
-  }
-
-  list.innerHTML = html;
-}
-// ── CHECKOUT ──────────────────────────────────────────────
-async function checkout() {
-  const cbNum = document.getElementById('coNum').value.trim();
-  const stuId = document.getElementById('coStudent').value.trim();
-  const notes = document.getElementById('coNotes').value.trim();
-  const msg   = document.getElementById('coMsg');
-  if (!cbNum || !stuId) { showMsg(msg, 'Enter Chromebook # and Student ID.', 'error'); return; }
-
-  // Check if this student already has a Chromebook checked out
-  const alreadyCheckedOut = allReportRows.find(
-    r => String(r.studentId).trim() === String(stuId).trim() && r.status === 'Out'
-  );
-
-  if (alreadyCheckedOut) {
-    // Show warning modal; on confirm, proceed with checkout
-    showDuplicateStudentModal(stuId, alreadyCheckedOut.cbNum, () => {
-      performCheckout(cbNum, stuId, notes, msg);
-    });
-    return;
-  }
-
-  performCheckout(cbNum, stuId, notes, msg);
-}
-
- async function preloadData() {
-  try {
-    const res = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-
-    cachedReport = data.rows || [];
-    allReportRows = cachedReport;
-
-  } catch (err) {
-    console.error('Preload failed:', err);
-  }
-}
-function showDuplicateStudentModal(stuId, existingCbNum, onConfirm) {
-  // Remove any existing modal
-  const existing = document.getElementById('duplicateStudentModal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'duplicateStudentModal';
-  modal.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-box">
-        <h3 class="modal-title">⚠️ Student Already Has a Chromebook</h3>
-        <p class="modal-body">
-          Student <strong>${stuId}</strong> already has Chromebook
-          <strong>#${existingCbNum}</strong> checked out.<br><br>
-          Do you still want to check out another Chromebook to this student?
-        </p>
-        <div class="modal-actions">
-          <button class="btn btn-danger" id="duplicateYesBtn">Yes, Check Out Anyway</button>
-          <button class="btn btn-ghost" id="duplicateNoBtn">No, Cancel</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  document.getElementById('duplicateYesBtn').addEventListener('click', () => {
-    modal.remove();
-    onConfirm();
-  });
-
-  document.getElementById('duplicateNoBtn').addEventListener('click', () => {
-    modal.remove();
-    const msg = document.getElementById('coMsg');
-    showMsg(msg, 'Checkout cancelled.', 'error');
-  });
-}
-
-async function performCheckout(cbNum, stuId, notes, msg) {
-  showMsg(msg, 'Saving...', '');
-  try {
-    const res  = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'checkout', cbNum, studentId: stuId, checkoutDate: today(), notes })
-    });
-    const data = await res.json();
-   if (data.success) {
-
-  await preloadData();
-
-  showMsg(msg, `✓ Chromebook #${cbNum} checked out to ${stuId}.`, 'success');
-
-  document.getElementById('coNum').value = '';
-  document.getElementById('coStudent').value = '';
-  document.getElementById('coNotes').value = '';
-
-  document.getElementById('coNum').focus();
-
-  loadSidebarCbListFromCache();
-  loadDashboard();
-} else {
-      showMsg(msg, data.message || 'Error.', 'error');
-    }
-  } catch(e) {
-    showMsg(msg, 'Connection error.', 'error');
-  }
-}
-
-// ── CHECKIN ──────────────────────────────────────────────
-async function checkin() {
-  const cbNum = document.getElementById('ciNum').value.trim();
-  const msg   = document.getElementById('ciMsg');
-  if (!cbNum) { showMsg(msg, 'Enter Chromebook #.', 'error'); return; }
-  showMsg(msg, 'Saving...', '');
-  try {
-    const res  = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'checkin', cbNum, checkinDate: today() })
-    });
-    const data = await res.json();
-    if (data.success) {
-
-  await preloadData();
-
-  showMsg(
-    msg,
-    `✓ Chromebook #${cbNum} checked back in (was with student ${data.studentId}).`,
-    'success'
-  );
-
-  document.getElementById('ciNum').value = '';
-  document.getElementById('ciNum').focus();
-
-  loadSidebarCbListFromCache();
-  loadDashboard();
-}else {
-      showMsg(msg, data.message || 'Error.', 'error');
-    }
-  } catch(e) {
-    showMsg(msg, 'Connection error.', 'error');
-  }
-}
-
-// ── REPORT ──────────────────────────────────────────────
-async function loadReport() {
-  const tbody = document.getElementById('reportBody');
-  const searchEl = document.getElementById('reportSearch');
-
-  if (searchEl) searchEl.value = '';
-
-  // 🔥 FAST PATH: use cache instantly
-  if (cachedReport) {
-    allReportRows = cachedReport;
-    renderReport(cachedReport);
-    return;
-  }
-
-  // fallback (only if cache empty)
-  tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
-
-  try {
-    const res = await fetch(SCRIPT_URL + '?action=report');
-    const data = await res.json();
-
-    cachedReport = data.rows || [];
-    allReportRows = cachedReport;
-
-    renderReport(cachedReport);
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="8">Error loading data</td></tr>';
-  }
-}
-
-function renderReport(rows) {
-  const tbody = document.getElementById('reportBody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No records yet.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
-      <td>${r.barcode || '—'}</td>
-      <td>${r.serial || '—'}</td>
-      <td>${r.studentId}</td>
-      <td>${r.checkoutDate}</td>
-      <td>${r.checkinDate}</td>
-      <td><span class="badge ${r.status === 'Out' ? 'badge-out' : 'badge-in-green'}">${r.status}</span></td>
-      <td>${r.notes || '—'}</td>
-    </tr>
-  `).join('');
-}
-
-function filterReport() {
-  const q = document.getElementById('reportSearch').value.toLowerCase();
-  if (!allReportRows.length) { loadReport(); return; }
-  if (!q) { renderReport(allReportRows); return; }
-  const filtered = allReportRows.filter(r =>
-    String(r.cbNum).toLowerCase().includes(q)
-  );
-  renderReport(filtered);
-}
-function updateDashboardFromCache() {
-  loadDashboard();
-}
-
-function loadSidebarCbListFromCache() {
-  const grid = document.getElementById('sidebarCbGrid');
-  const rows = cachedReport || [];
-
-  if (!rows.length) return;
+  if (!rows || !rows.length) return;
 
   const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
 
   grid.innerHTML = sorted.map(r => `
     <a href="#"
        class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
-       onclick="viewHistory('${r.cbNum}'); return false;"
-       title="#${r.cbNum} — ${r.status}">
+       onclick="viewHistory('${r.cbNum}'); return false;">
       ${r.cbNum}
     </a>
   `).join('');
 }
 
-// ── CHECKED OUT ──────────────────────────────────────────────
-let allCheckedOutRows = [];
+/* ───────────────────────────────
+   DASHBOARD
+─────────────────────────────── */
+function loadDashboardFromRows(rows) {
+  const total = rows.length;
+  let out = 0;
+  let overdue = 0;
 
-async function loadCheckedOut() {
-  const tbody = document.getElementById('checkedoutBody');
-  if (!tbody) return;
-
-  const searchEl = document.getElementById('checkedoutSearch');
-  if (searchEl) searchEl.value = '';
-
-  tbody.innerHTML =
-    '<tr><td colspan="7" class="table-loading">Loading...</td></tr>';
-
-  try {
-
-    if (!cachedReport) {
-      const res = await fetch(SCRIPT_URL + '?action=report');
-      const data = await res.json();
-
-      cachedReport = data.rows || [];
-      allReportRows = cachedReport;
+  for (const r of rows) {
+    if (r.status === 'Out') {
+      out++;
+      if (daysSince(r.checkoutDate) > 0) overdue++;
     }
-
-    const rows = cachedReport
-      .filter(r => r.status === 'Out')
-      .sort((a, b) =>
-        daysSince(b.checkoutDate) - daysSince(a.checkoutDate)
-      );
-
-    allCheckedOutRows = rows;
-    renderCheckedOut(rows);
-
-  } catch (e) {
-    tbody.innerHTML =
-      '<tr><td colspan="7" class="table-error">Could not load data.</td></tr>';
-  }
-}
-function renderCheckedOut(rows) {
-  const tbody = document.getElementById('checkedoutBody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">✓ All Chromebooks are currently checked in.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td><a class="cb-link" href="#" onclick="viewHistory('${r.cbNum}'); return false;">#${r.cbNum}</a></td>
-      <td>${r.barcode || '—'}</td>
-      <td>${r.serial || '—'}</td>
-      <td>${r.studentId}</td>
-      <td>${r.checkoutDate}</td>
-      <td><span class="badge badge-out">${daysSince(r.checkoutDate)}</span></td>
-      <td>${r.notes || '—'}</td>
-    </tr>
-  `).join('');
-}
-
-function filterCheckedOut() {
-  const q = document.getElementById('checkedoutSearch').value.toLowerCase();
-  if (!q) { renderCheckedOut(allCheckedOutRows); return; }
-  const filtered = allCheckedOutRows.filter(r =>
-    String(r.cbNum).toLowerCase().includes(q)
-  );
-  renderCheckedOut(filtered);
-}
-
-// ── HISTORY ──────────────────────────────────────────────
-async function viewHistory(cbNum) {
-  const histBtn = document.getElementById('historyNavBtn');
-  histBtn.style.display = '';
-
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  document.getElementById('history').classList.add('active');
-  histBtn.classList.add('active');
-
-  document.getElementById('historyTitle').textContent = `Chromebook #${cbNum}`;
-
-  const row = allReportRows.find(r => String(r.cbNum) === String(cbNum));
-  const meta = document.getElementById('historyMeta');
-  if (row) {
-    const statusClass = row.status === 'Out' ? 'badge-out' : 'badge-in';
-    const statusIcon  = row.status === 'Out' ? '🔴' : '🟢';
-    meta.innerHTML = `
-      <span>Barcode: <strong>${row.barcode || '—'}</strong></span>
-      <span>Serial #: <strong>${row.serial || '—'}</strong></span>
-      <span>Current Status: <span class="badge ${statusClass}">${statusIcon} ${row.status}</span></span>
-    `;
-  } else {
-    meta.innerHTML = '';
   }
 
-  const tbody = document.getElementById('historyBody');
-  tbody.innerHTML = '<tr><td colspan="4" class="table-loading">Loading...</td></tr>';
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statOut').textContent = out;
+  document.getElementById('statIn').textContent = total - out;
+  document.getElementById('statOverdue').textContent = overdue;
+}
+
+/* ───────────────────────────────
+   CHECKOUT
+─────────────────────────────── */
+async function checkout() {
+  const cbNum = document.getElementById('coNum').value.trim();
+  const stuId = document.getElementById('coStudent').value.trim();
+  const notes = document.getElementById('coNotes').value.trim();
+  const msg   = document.getElementById('coMsg');
+
+  if (!cbNum || !stuId) return showMsg(msg, 'Missing fields', 'error');
+
+  showMsg(msg, 'Saving...', '');
 
   try {
-    const res  = await fetch(SCRIPT_URL + '?action=history&cbNum=' + encodeURIComponent(cbNum));
-    const data = await res.json();
-    if (!data.rows || !data.rows.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No history found.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.rows.map(r => `
-      <tr>
-        <td>${r.studentId}</td>
-        <td>${r.checkoutDate}</td>
-        <td>${r.checkinDate}</td>
-        <td>${r.notes || '—'}</td>
-      </tr>
-    `).join('');
-  } catch(err) {
-    tbody.innerHTML = '<tr><td colspan="4" class="table-error">Could not load history.</td></tr>';
-  }
-}
-
-// ── SETTINGS / RESET ──────────────────────────────────────────────
-function confirmResetAll() {
-  const modal = document.createElement('div');
-  modal.id = 'confirmModal';
-  modal.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-box">
-        <h3 class="modal-title">⚠️ Reset All History</h3>
-        <p class="modal-body">Are you sure you want to clear the history of <strong>every Chromebook</strong>? This cannot be undone.</p>
-        <div class="modal-actions">
-          <button class="btn btn-danger" onclick="resetAllHistory()">Yes, Reset All</button>
-          <button class="btn btn-ghost" onclick="document.getElementById('confirmModal').remove()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
-
-async function resetAllHistory() {
-  document.getElementById('confirmModal').remove();
-  const tbody = document.getElementById('reportBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-loading">Resetting all histories...</td></tr>';
-  try {
-    const res  = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAllHistory' }) });
-    const data = await res.json();
-    if (data.success) { loadReport(); loadSidebarCbListFromCache(); }
-    else if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="table-error">Error: ${data.message}</td></tr>`;
-  } catch(e) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="table-error">Connection error.</td></tr>';
-  }
-}
-
-// ── SCANNER ──────────────────────────────────────────────
-let html5Scanner = null;
-let currentTarget = null;
-
-function scanCheckoutBarcode() { startCameraScan('coNum'); }
-function scanCheckinBarcode()  { startCameraScan('ciNum'); }
-function scanStudentID()       { startCameraScan('coStudent'); }
-
-function startCameraScan(targetField) {
-  currentTarget = targetField;
-  const modal = document.createElement('div');
-  modal.id = 'scannerModal';
-  modal.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-box">
-        <h3 class="modal-title">Scan Barcode</h3>
-        <div id="reader"></div>
-        <button class="btn btn-danger btn-full" style="margin-top:15px;" onclick="stopScanner()">Cancel — Type Instead</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  html5Scanner = new Html5Qrcode("reader");
-  html5Scanner.start(
-    { facingMode: "environment" },
-    { fps: 15, qrbox: { width: 350, height: 150 } },
-    (decodedText) => {
-      document.getElementById(currentTarget).value = decodedText.trim();
-      stopScanner();
-    },
-    () => {}
-  );
-}
-
-function stopScanner() {
-  const modal = document.getElementById('scannerModal');
-  if (html5Scanner) {
-    try {
-      html5Scanner.stop().then(() => { html5Scanner.clear(); html5Scanner = null; if (modal) modal.remove(); })
-        .catch(() => { if (modal) modal.remove(); html5Scanner = null; });
-    } catch { if (modal) modal.remove(); html5Scanner = null; }
-  } else { if (modal) modal.remove(); }
-}
-
-// ── PRINT ──────────────────────────────────────────────
-function printReport() {
-  const reportContent = document.getElementById('report').innerHTML;
-  const pw = window.open('', '_blank');
-  pw.document.write(`
-    <html><head><title>Chromebook Report</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
-    </head><body><h1>Poolesville Chromebook Report</h1>${reportContent}</body></html>
-  `);
-  pw.document.close();
-  pw.focus();
-  setTimeout(() => pw.print(), 500);
-}
-
-function printCheckedOut() {
-  const content = document.getElementById('checkedout').innerHTML;
-  const pw = window.open('', '_blank');
-  pw.document.write(`
-    <html><head><title>Checked Out Chromebooks</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:8px;text-align:left;}th{background:#f2f2f2;}button,input{display:none;}</style>
-    </head><body><h1>Poolesville Checked Out Chromebooks</h1>${content}</body></html>
-  `);
-  pw.document.close();
-  pw.focus();
-  setTimeout(() => pw.print(), 500);
-}
-
-// ── UTILS ──────────────────────────────────────────────
-function today() {
-  return new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
-}
-
-function showMsg(el, text, type) {
-  el.textContent = text;
-  el.className = 'msg ' + type;
-}
-function clearCache() {
-  if (!confirm('Clear local cached data?')) return;
-
-  cachedReport = null;
-  allReportRows = [];
-  allCheckedOutRows = [];
-
-  localStorage.removeItem('cbCache');
-
-  alert('Cache cleared.');
-}
-
-async function sendOverdueEmails() {
-
-  if (!confirm('Send reminder emails to all students with overdue Chromebooks?')) {
-    return;
-  }
-
-  try {
-
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
-        action: 'sendOverdueEmails'
+        action: 'checkout',
+        cbNum,
+        studentId: stuId,
+        checkoutDate: today(),
+        notes
       })
     });
 
     const data = await res.json();
 
     if (data.success) {
-      alert(`Emails sent: ${data.sent}`);
+      await refreshAllUI();   // 🔥 FIX
+      showMsg(msg, 'Checked out!', 'success');
     } else {
-      alert(data.message || 'Failed to send emails.');
+      showMsg(msg, data.message, 'error');
     }
 
-  } catch (err) {
-    alert('Connection error.');
+  } catch {
+    showMsg(msg, 'Network error', 'error');
   }
 }
-  
-// ── THEME TOGGLE ──────────────────────────────────────────
-function toggleTheme() {
-  document.body.classList.toggle('light-mode');
-  const isLight = document.body.classList.contains('light-mode');
-  localStorage.setItem('cbTheme', isLight ? 'light' : 'dark');
-  document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
-}
-  async function manualRefresh() {
+
+/* ───────────────────────────────
+   CHECKIN
+─────────────────────────────── */
+async function checkin() {
+  const cbNum = document.getElementById('ciNum').value.trim();
+  const msg   = document.getElementById('ciMsg');
+
+  if (!cbNum) return showMsg(msg, 'Enter CB #', 'error');
+
+  showMsg(msg, 'Saving...', '');
+
   try {
-    cachedReport = null;
-    allReportRows = [];
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'checkin',
+        cbNum,
+        checkinDate: today()
+      })
+    });
 
-    await preloadData();
-    loadDashboard();
-    loadSidebarCbListFromCache();
+    const data = await res.json();
 
-    alert('Data refreshed successfully.');
-  } catch (e) {
-    alert('Refresh failed.');
+    if (data.success) {
+      await refreshAllUI();   // 🔥 FIX
+      showMsg(msg, 'Checked in!', 'success');
+    } else {
+      showMsg(msg, data.message, 'error');
+    }
+
+  } catch {
+    showMsg(msg, 'Network error', 'error');
   }
 }
 
-function initTheme() {
-  const saved = localStorage.getItem('cbTheme');
-  if (saved === 'light') {
-    document.body.classList.add('light-mode');
-    document.getElementById('themeToggle').textContent = '☀️';
-  }
+/* ───────────────────────────────
+   REPORT
+─────────────────────────────── */
+function renderReport(rows) {
+  const tbody = document.getElementById('reportBody');
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>#${r.cbNum}</td>
+      <td>${r.barcode || '—'}</td>
+      <td>${r.serial || '—'}</td>
+      <td>${r.studentId}</td>
+      <td>${r.checkoutDate}</td>
+      <td>${r.checkinDate}</td>
+      <td>${r.status}</td>
+      <td>${r.notes || ''}</td>
+    </tr>
+  `).join('');
+}
+
+/* ───────────────────────────────
+   CHECKED OUT
+─────────────────────────────── */
+function renderCheckedOut(rows) {
+  const tbody = document.getElementById('checkedoutBody');
+  const outRows = rows.filter(r => r.status === 'Out');
+
+  tbody.innerHTML = outRows.map(r => `
+    <tr>
+      <td>#${r.cbNum}</td>
+      <td>${r.studentId}</td>
+      <td>${r.checkoutDate}</td>
+    </tr>
+  `).join('');
+}
+
+/* ───────────────────────────────
+   UTIL
+─────────────────────────────── */
+function daysSince(date) {
+  return Math.floor((new Date() - new Date(date)) / 86400000);
+}
+
+function today() {
+  return new Date().toLocaleDateString();
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+/* ───────────────────────────────
+   TAB SWITCH
+─────────────────────────────── */
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
 }
 </script>
   <button id="themeToggle" onclick="toggleTheme()">🌙</button>
