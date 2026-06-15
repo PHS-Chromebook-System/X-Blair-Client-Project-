@@ -355,27 +355,24 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxi6EGHqSMc5nITRGpCI
 const ACCESS_KEY = 'chromebook';
 
 let allReportRows = [];
-let cachedReport = null;
-let allCheckedOutRows = [];
 
 /* =========================
-   CORE GLOBAL REFRESH (FIX)
+   GLOBAL DATA REFRESH
 ========================= */
 async function refreshAllUI() {
   try {
     const res = await fetch(SCRIPT_URL + '?action=report');
     const data = await res.json();
 
-    cachedReport = data.rows || [];
-    allReportRows = cachedReport;
+    allReportRows = data.rows || [];
 
-    loadDashboardFromRows(cachedReport);
-    renderReport(cachedReport);
-    renderCheckedOut(cachedReport);
+    loadDashboardFromRows(allReportRows);
+    renderReport(allReportRows);
+    renderCheckedOut(allReportRows);
     loadSidebarCbListFromCache();
 
   } catch (e) {
-    console.error("refreshAllUI failed", e);
+    console.error("refreshAllUI failed:", e);
   }
 }
 
@@ -386,7 +383,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
 
   if (localStorage.getItem('cbLoggedIn')) {
-    await preloadData();
     showApp(localStorage.getItem('cbLoggedIn'));
   }
 });
@@ -400,16 +396,16 @@ async function showApp(user) {
 }
 
 /* =========================
-   AUTH
+   LOGIN
 ========================= */
 function login() {
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value.trim();
   const msg  = document.getElementById('loginMsg');
 
-  if (!user) return showMsg(msg, 'Please enter school name.', 'error');
-  if (!pass) return showMsg(msg, 'Please enter access key.', 'error');
-  if (pass !== ACCESS_KEY) return showMsg(msg, 'Wrong access key.', 'error');
+  if (!user) return showMsg(msg, 'Enter school name', 'error');
+  if (!pass) return showMsg(msg, 'Enter access key', 'error');
+  if (pass !== ACCESS_KEY) return showMsg(msg, 'Wrong key', 'error');
 
   localStorage.setItem('cbLoggedIn', user);
   showApp(user);
@@ -417,8 +413,7 @@ function login() {
 
 function logout() {
   localStorage.removeItem('cbLoggedIn');
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
+  location.reload();
 }
 
 /* =========================
@@ -433,18 +428,17 @@ function showTab(name, btn) {
 
   if (name === 'dashboard') loadDashboardFromRows(allReportRows);
   if (name === 'report') renderReport(allReportRows);
-  if (name === 'checkedout') renderCheckedOut(allReportRows.filter(r => r.status === 'Out'));
+  if (name === 'checkedout') renderCheckedOut(allReportRows);
 }
 
 /* =========================
    DASHBOARD
 ========================= */
 function loadDashboardFromRows(rows) {
-  if (!rows) return;
-
   const total = rows.length;
   let out = 0;
   let overdue = 0;
+
   const activity = [];
 
   rows.forEach(r => {
@@ -453,12 +447,12 @@ function loadDashboardFromRows(rows) {
       if (daysSince(r.checkoutDate) > 0) overdue++;
     }
 
-    if (r.checkoutDate && r.checkoutDate !== '—') {
-      activity.push({ ts: Date.parse(r.checkoutDate), text: `#${r.cbNum} out`, date: r.checkoutDate, type:'out' });
+    if (r.checkoutDate) {
+      activity.push({ text: `#${r.cbNum} out`, date: r.checkoutDate, ts: Date.parse(r.checkoutDate) });
     }
 
     if (r.checkinDate && r.checkinDate !== '—') {
-      activity.push({ ts: Date.parse(r.checkinDate), text: `#${r.cbNum} in`, date: r.checkinDate, type:'in' });
+      activity.push({ text: `#${r.cbNum} in`, date: r.checkinDate, ts: Date.parse(r.checkinDate) });
     }
   });
 
@@ -469,32 +463,40 @@ function loadDashboardFromRows(rows) {
 
   activity.sort((a,b) => b.ts - a.ts);
 
-  const list = document.getElementById('activityList');
-  list.innerHTML = activity.slice(0,10).map(a => `
-    <div class="activity-item">
-      <span>${a.text}</span>
-      <span>${a.date}</span>
-    </div>
-  `).join('');
+  document.getElementById('activityList').innerHTML =
+    activity.slice(0,10).map(a => `
+      <div class="activity-item">
+        <span>${a.text}</span>
+        <span>${a.date}</span>
+      </div>
+    `).join('');
 }
 
 /* =========================
-   SIDEBAR
+   SIDEBAR (FIXED - NEVER BLANK)
 ========================= */
 function loadSidebarCbListFromCache() {
   const grid = document.getElementById('sidebarCbGrid');
   if (!grid) return;
 
-  const rows = cachedReport || [];
+  const rows = allReportRows;
 
-  grid.innerHTML = rows
-    .sort((a,b) => Number(a.cbNum)-Number(b.cbNum))
-    .map(r => `
-      <a href="#" class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
-         onclick="viewHistory('${r.cbNum}'); return false;">
-        ${r.cbNum}
-      </a>
-    `).join('');
+  if (!rows || rows.length === 0) {
+    grid.innerHTML = '<div class="sidebar-cb-loading">Loading...</div>';
+    return;
+  }
+
+  const sorted = [...rows]
+    .filter(r => r.cbNum)
+    .sort((a,b) => Number(a.cbNum) - Number(b.cbNum));
+
+  grid.innerHTML = sorted.map(r => `
+    <a href="#"
+       class="sidebar-cb-chip ${r.status === 'Out' ? 'cb-out' : 'cb-in'}"
+       onclick="viewHistory('${r.cbNum}'); return false;">
+      ${r.cbNum}
+    </a>
+  `).join('');
 }
 
 /* =========================
@@ -502,17 +504,47 @@ function loadSidebarCbListFromCache() {
 ========================= */
 function renderReport(rows) {
   const tbody = document.getElementById('reportBody');
-  if (!rows.length) return tbody.innerHTML = '<tr><td colspan="8">No data</td></tr>';
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8">No data</td></tr>';
+    return;
+  }
 
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td><a href="#" onclick="viewHistory('${r.cbNum}')">#${r.cbNum}</a></td>
       <td>${r.barcode || '—'}</td>
       <td>${r.serial || '—'}</td>
+      <td>${r.studentId || ''}</td>
+      <td>${r.checkoutDate || ''}</td>
+      <td>${r.checkinDate || '—'}</td>
+      <td>${r.status}</td>
+      <td>${r.notes || ''}</td>
+    </tr>
+  `).join('');
+}
+
+/* =========================
+   CHECKED OUT
+========================= */
+function renderCheckedOut(rows) {
+  const tbody = document.getElementById('checkedoutBody');
+
+  const out = rows.filter(r => r.status === 'Out');
+
+  if (!out.length) {
+    tbody.innerHTML = '<tr><td colspan="7">All checked in</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = out.map(r => `
+    <tr>
+      <td>#${r.cbNum}</td>
+      <td>${r.barcode || '—'}</td>
+      <td>${r.serial || '—'}</td>
       <td>${r.studentId}</td>
       <td>${r.checkoutDate}</td>
-      <td>${r.checkinDate}</td>
-      <td>${r.status}</td>
+      <td>${daysSince(r.checkoutDate)}</td>
       <td>${r.notes || ''}</td>
     </tr>
   `).join('');
@@ -525,12 +557,10 @@ async function checkout() {
   const cbNum = document.getElementById('coNum').value.trim();
   const stuId = document.getElementById('coStudent').value.trim();
   const notes = document.getElementById('coNotes').value.trim();
-  const msg   = document.getElementById('coMsg');
+  const msg = document.getElementById('coMsg');
 
   if (!cbNum || !stuId)
     return showMsg(msg, 'Missing fields', 'error');
-
-  showMsg(msg, 'Saving...', '');
 
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
@@ -547,7 +577,7 @@ async function checkout() {
 
   if (data.success) {
     await refreshAllUI();
-    showMsg(msg, 'Checked out!', 'success');
+    showMsg(msg, 'Checked out', 'success');
   } else {
     showMsg(msg, data.message, 'error');
   }
@@ -558,7 +588,7 @@ async function checkout() {
 ========================= */
 async function checkin() {
   const cbNum = document.getElementById('ciNum').value.trim();
-  const msg   = document.getElementById('ciMsg');
+  const msg = document.getElementById('ciMsg');
 
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
@@ -573,7 +603,7 @@ async function checkin() {
 
   if (data.success) {
     await refreshAllUI();
-    showMsg(msg, 'Checked in!', 'success');
+    showMsg(msg, 'Checked in', 'success');
   } else {
     showMsg(msg, data.message, 'error');
   }
@@ -583,8 +613,6 @@ async function checkin() {
    HISTORY
 ========================= */
 async function viewHistory(cbNum) {
-  document.getElementById('history').classList.add('active');
-
   const res = await fetch(SCRIPT_URL + '?action=history&cbNum=' + cbNum);
   const data = await res.json();
 
@@ -597,6 +625,8 @@ async function viewHistory(cbNum) {
         <td>${r.notes || ''}</td>
       </tr>
     `).join('');
+
+  showTab('history');
 }
 
 /* =========================
@@ -615,17 +645,11 @@ function showMsg(el, text, type) {
   el.className = 'msg ' + type;
 }
 
-async function preloadData() {
-  await refreshAllUI();
-}
-
 /* =========================
-   SETTINGS HELPERS
+   THEME
 ========================= */
-async function manualRefresh() {
-  await refreshAllUI();
-  alert("Updated");
-}
+function initTheme() {}
+function toggleTheme() {}
 </script>
 </body>
 </html>
