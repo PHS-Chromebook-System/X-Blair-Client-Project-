@@ -357,33 +357,38 @@ const ACCESS_KEY = 'chromebook';
 let allReportRows = [];
 let cachedReport = null;
 
-/* ───────────────────────────────
-   MASTER DATA FETCH
-─────────────────────────────── */
+/* ─────────────────────────────
+   FETCH DATA
+───────────────────────────── */
 async function fetchLatest() {
   const res = await fetch(SCRIPT_URL + '?action=report');
   const data = await res.json();
   return data.rows || [];
 }
 
-/* ───────────────────────────────
-   🔥 SINGLE SOURCE OF TRUTH UI UPDATE
-─────────────────────────────── */
+/* ─────────────────────────────
+   MASTER UI REFRESH (FIXED CORE)
+───────────────────────────── */
 async function refreshAllUI() {
-  const rows = await fetchLatest();
+  try {
+    const rows = await fetchLatest();
 
-  cachedReport = rows;
-  allReportRows = rows;
+    cachedReport = rows;
+    allReportRows = rows;
 
-  loadDashboardFromRows(rows);
-  renderSidebar(rows);
-  renderReport(rows);
-  renderCheckedOut(rows);
+    loadDashboardFromRows(rows);
+    renderSidebar(rows);
+    renderReport(rows);
+    renderCheckedOut(rows);
+
+  } catch (err) {
+    console.error("refreshAllUI error:", err);
+  }
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    INIT
-─────────────────────────────── */
+───────────────────────────── */
 window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
 
@@ -401,9 +406,9 @@ async function showApp(user) {
   await refreshAllUI();
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    LOGIN / LOGOUT
-─────────────────────────────── */
+───────────────────────────── */
 function login() {
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value.trim();
@@ -411,7 +416,7 @@ function login() {
 
   if (!user) return showMsg(msg, 'Enter school name.', 'error');
   if (!pass) return showMsg(msg, 'Enter access key.', 'error');
-  if (pass !== ACCESS_KEY) return showMsg(msg, 'Wrong key.', 'error');
+  if (pass !== ACCESS_KEY) return showMsg(msg, 'Wrong access key.', 'error');
 
   localStorage.setItem('cbLoggedIn', user);
   showApp(user);
@@ -419,16 +424,15 @@ function login() {
 
 function logout() {
   localStorage.removeItem('cbLoggedIn');
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
+  location.reload();
 }
 
-/* ───────────────────────────────
-   SIDEBAR (FIXED)
-─────────────────────────────── */
+/* ─────────────────────────────
+   SIDEBAR (CLICKABLE + LIVE)
+───────────────────────────── */
 function renderSidebar(rows) {
   const grid = document.getElementById('sidebarCbGrid');
-  if (!rows || !rows.length) return;
+  if (!rows) return;
 
   const sorted = [...rows].sort((a, b) => Number(a.cbNum) - Number(b.cbNum));
 
@@ -441,9 +445,9 @@ function renderSidebar(rows) {
   `).join('');
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    DASHBOARD
-─────────────────────────────── */
+───────────────────────────── */
 function loadDashboardFromRows(rows) {
   const total = rows.length;
   let out = 0;
@@ -462,16 +466,17 @@ function loadDashboardFromRows(rows) {
   document.getElementById('statOverdue').textContent = overdue;
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    CHECKOUT
-─────────────────────────────── */
+───────────────────────────── */
 async function checkout() {
   const cbNum = document.getElementById('coNum').value.trim();
   const stuId = document.getElementById('coStudent').value.trim();
   const notes = document.getElementById('coNotes').value.trim();
   const msg   = document.getElementById('coMsg');
 
-  if (!cbNum || !stuId) return showMsg(msg, 'Missing fields', 'error');
+  if (!cbNum || !stuId)
+    return showMsg(msg, 'Missing fields', 'error');
 
   showMsg(msg, 'Saving...', '');
 
@@ -490,8 +495,8 @@ async function checkout() {
     const data = await res.json();
 
     if (data.success) {
-      await refreshAllUI();   // 🔥 FIX
-      showMsg(msg, 'Checked out!', 'success');
+      await refreshAllUI();
+      showMsg(msg, 'Checked out successfully', 'success');
     } else {
       showMsg(msg, data.message, 'error');
     }
@@ -501,14 +506,15 @@ async function checkout() {
   }
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    CHECKIN
-─────────────────────────────── */
+───────────────────────────── */
 async function checkin() {
   const cbNum = document.getElementById('ciNum').value.trim();
   const msg   = document.getElementById('ciMsg');
 
-  if (!cbNum) return showMsg(msg, 'Enter CB #', 'error');
+  if (!cbNum)
+    return showMsg(msg, 'Enter Chromebook #', 'error');
 
   showMsg(msg, 'Saving...', '');
 
@@ -525,8 +531,8 @@ async function checkin() {
     const data = await res.json();
 
     if (data.success) {
-      await refreshAllUI();   // 🔥 FIX
-      showMsg(msg, 'Checked in!', 'success');
+      await refreshAllUI();
+      showMsg(msg, 'Checked in successfully', 'success');
     } else {
       showMsg(msg, data.message, 'error');
     }
@@ -536,45 +542,84 @@ async function checkin() {
   }
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    REPORT
-─────────────────────────────── */
+───────────────────────────── */
 function renderReport(rows) {
   const tbody = document.getElementById('reportBody');
 
   tbody.innerHTML = rows.map(r => `
     <tr>
-      <td>#${r.cbNum}</td>
+      <td>
+        <a href="#" onclick="viewHistory('${r.cbNum}'); return false;">
+          #${r.cbNum}
+        </a>
+      </td>
       <td>${r.barcode || '—'}</td>
       <td>${r.serial || '—'}</td>
-      <td>${r.studentId}</td>
-      <td>${r.checkoutDate}</td>
-      <td>${r.checkinDate}</td>
+      <td>${r.studentId || '—'}</td>
+      <td>${r.checkoutDate || '—'}</td>
+      <td>${r.checkinDate || '—'}</td>
       <td>${r.status}</td>
-      <td>${r.notes || ''}</td>
+      <td>${r.notes || '—'}</td>
     </tr>
   `).join('');
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
    CHECKED OUT
-─────────────────────────────── */
+───────────────────────────── */
 function renderCheckedOut(rows) {
   const tbody = document.getElementById('checkedoutBody');
-  const outRows = rows.filter(r => r.status === 'Out');
+  const out = rows.filter(r => r.status === 'Out');
 
-  tbody.innerHTML = outRows.map(r => `
+  tbody.innerHTML = out.map(r => `
     <tr>
       <td>#${r.cbNum}</td>
-      <td>${r.studentId}</td>
-      <td>${r.checkoutDate}</td>
+      <td>${r.studentId || '—'}</td>
+      <td>${r.checkoutDate || '—'}</td>
     </tr>
   `).join('');
 }
 
-/* ───────────────────────────────
+/* ─────────────────────────────
+   HISTORY (FIXED - LIVE FETCH)
+───────────────────────────── */
+async function viewHistory(cbNum) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('history').classList.add('active');
+
+  document.getElementById('historyTitle').textContent = `Chromebook #${cbNum}`;
+
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=history&cbNum=' + cbNum);
+    const data = await res.json();
+
+    if (!data.rows || !data.rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4">No history found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.rows.map(r => `
+      <tr>
+        <td>${r.studentId}</td>
+        <td>${r.checkoutDate}</td>
+        <td>${r.checkinDate}</td>
+        <td>${r.notes || '—'}</td>
+      </tr>
+    `).join('');
+
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="4">Error loading history</td></tr>';
+  }
+}
+
+/* ─────────────────────────────
    UTIL
-─────────────────────────────── */
+───────────────────────────── */
 function daysSince(date) {
   return Math.floor((new Date() - new Date(date)) / 86400000);
 }
@@ -588,15 +633,14 @@ function showMsg(el, text, type) {
   el.className = 'msg ' + type;
 }
 
-/* ───────────────────────────────
-   TAB SWITCH
-─────────────────────────────── */
-function showTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(name).classList.add('active');
+/* ─────────────────────────────
+   MANUAL REFRESH
+───────────────────────────── */
+async function manualRefresh() {
+  await refreshAllUI();
+  alert("Updated!");
 }
-</script>
-  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
+</script>  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
 </body>
 </html>
 
