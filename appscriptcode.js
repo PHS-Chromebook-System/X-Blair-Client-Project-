@@ -1,6 +1,6 @@
 const SHEET_ID = '1l7eJ8iqc7zTGliKSqJUZIb055DujaIXnu5WazJyU3_c';
 const OVERDUE_SHEET = 'Overdue Chromes';
-const CACHE_TIME = 60 * 5; // 5 minutes
+const CACHE_TIME = 5; // 5 minutes
 
 function doGet(e) {
   const action = e.parameter.action;
@@ -59,10 +59,8 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
 
     if (data.action === "sendOverdueEmails") {
-      return ContentService
-        .createTextOutput(JSON.stringify(sendAllOverdueEmails()))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+  return sendOverdueEmails();
+}
 
     if (data.action === "checkout") {
       return checkout(data);
@@ -445,74 +443,63 @@ function scanCheckinBarcode() {
   document.getElementById("ciNum").value = barcode;
 }
 
-function sendOverdueEmail(email, studentId, cbNum, daysOut) {
 
-  const subject = `Overdue Chromebook Notice - Chromebook #${cbNum}`;
 
-  const body =
-`Hello,
-
-Our records indicate that Chromebook #${cbNum} is currently checked out under Student ID ${studentId}.
-
-This Chromebook has been checked out for ${daysOut} day(s).
-
-Please return the Chromebook to the media center as soon as possible.
-
-Thank you,
-Poolesville Media Center`;
-
-  MailApp.sendEmail(
-    email,
-    subject,
-    body
-  );
-}
-
-function sendAllOverdueEmails() {
-
+function sendOverdueEmails() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
+  const main = ss.getSheetByName('Main');
+  const rows = main.getDataRange().getValues();
 
-  let sentCount = 0;
+  let sent = 0;
 
-  ss.getSheets().forEach(sheet => {
+  for (let i = 1; i < rows.length; i++) {
+    const cbNum = rows[i][0];
+    const sheet = ss.getSheetByName(String(cbNum));
 
-    if (sheet.getName() === "Main") return;
+    if (!sheet) continue;
 
-    const values = sheet.getDataRange().getValues();
+    const data = sheet.getDataRange().getValues();
 
     let latest = null;
 
-    for (let i = values.length - 1; i >= 3; i--) {
-      if (values[i][0]) {
-        latest = values[i];
+    for (let j = data.length - 1; j >= 3; j--) {
+      if (data[j][0]) {
+        latest = data[j];
         break;
       }
     }
 
-    if (!latest) return;
+    if (!latest) continue;
 
     const studentId = latest[0];
+    const checkoutDate = latest[1];
     const checkinDate = latest[2];
 
-    if (!checkinDate) {
+    if (!studentId || checkinDate) continue;
 
-      const email = studentId + "@mcpsmd.net";
+    const daysOut = Math.floor(
+      (new Date() - new Date(checkoutDate)) / (1000 * 60 * 60 * 24)
+    );
 
-      MailApp.sendEmail(
-        email,
-        "Chromebook Return Reminder",
-        "Our records indicate that Chromebook #" +
-        sheet.getName() +
-        " is currently checked out to you. Please return it when finished."
-      );
+    if (daysOut < 1) continue;
 
-      sentCount++;
-    }
-  });
+    const email = `${studentId}@mcpsmd.net`;
 
-  return {
+    MailApp.sendEmail({
+      to: email,
+      subject: `Overdue Chromebook Reminder (#${cbNum})`,
+      htmlBody: `
+        <p>Chromebook <b>#${cbNum}</b> is overdue by <b>${daysOut} days</b>.</p>
+        <p>Please return it to the media center.</p>
+      `
+    });
+
+    sent++;
+  }
+
+  return jsonResponse({
     success: true,
-    count: sentCount
-  };
+    sent
+  });
 }
 
