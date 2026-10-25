@@ -23,7 +23,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background-image: url(".backround_image_chromebooksystem.png");
+  background-image: url("./backround_image_chromebooksystem.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
