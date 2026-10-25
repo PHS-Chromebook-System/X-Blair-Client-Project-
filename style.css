@@ -973,3 +973,7 @@ body,
 .nav-item, input, .btn, #themeToggle, .topbar-mobile {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
+/* Make Asset Tracking text gold in light mode */
+body.light-mode .login-sub {
+  color: #ab945f;
+}
