@@ -872,7 +872,7 @@ body.light-mode {
   background: #f7f8fc;
   color: #20232e;
 }
-body.light-mode .login-wrapper       { background-image: url("jaasdjhasjd.png"); background-size: cover; background-position: center; background-repeat: no-repeat; }
+body.light-mode .login-wrapper       { background: transparent; }
 body.light-mode .login-card          { background: rgba(255,255,255,0.88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-color: rgba(156,129,84,0.25); box-shadow: 0 4px 24px rgba(30,40,80,0.08); }
 body.light-mode .login-title         { color: #9c8154; }
 body.light-mode .login-tagline       { color: #8b93ad; }
@@ -972,8 +972,4 @@ body,
 .table-wrapper, .settings-card, .modal-box, th, td,
 .nav-item, input, .btn, #themeToggle, .topbar-mobile {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-/* Make Asset Tracking text gold in light mode */
-body.light-mode .login-sub {
-  color: #ab945f;
 }
