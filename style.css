@@ -973,3 +973,10 @@ body,
 .nav-item, input, .btn, #themeToggle, .topbar-mobile {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
+/* Light mode login background */
+body.light-mode .login-wrapper {
+  background-image: url("./light_background_chromebooksystem.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
